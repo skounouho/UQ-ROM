@@ -11,25 +11,22 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#ifdef FIX_CLASS
-// clang-format off
-FixStyle(nve/rom,FixNVEROM);
-// clang-format on
-#else
+#ifndef LMP_FIX_NH_ROM_H
+#define LMP_FIX_NH_ROM_H
 
-#ifndef LMP_FIX_NVE_ROM_H
-#define LMP_FIX_NVE_ROM_H
-
-#include "fix_nve.h"
+#include "fix_nh.h"
 
 namespace LAMMPS_NS {
 
-class FixNVEROM : public FixNVE {
+class FixNHROM : public FixNH {
  public:
-  FixNVEROM(class LAMMPS *, int, char **);
+  FixNHROM(class LAMMPS *, int, char **);
 
-  void initial_integrate(int) override;
-  void final_integrate() override;
+ protected:
+  double inertia;
+
+  void nve_v() override;
+  void nve_x() override;
 
   //******************* ADDED ******************
 
@@ -37,7 +34,7 @@ class FixNVEROM : public FixNVE {
   void read_mean(std::string, double**);
   void convert_physical_to_reduced(double *, double *, double *);
   void convert_reduced_to_physical(double *, double *);
- 
+
  protected:
 
    int modelorder;
@@ -46,10 +43,8 @@ class FixNVEROM : public FixNVE {
    double *A;
    double *V;
    double *X;
-
 };
 
 }    // namespace LAMMPS_NS
 
-#endif
 #endif

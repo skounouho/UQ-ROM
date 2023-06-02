@@ -13,40 +13,20 @@
 
 #ifdef FIX_CLASS
 // clang-format off
-FixStyle(nve/rom,FixNVEROM);
+FixStyle(nvt/rom,FixNVTROM);
 // clang-format on
 #else
 
-#ifndef LMP_FIX_NVE_ROM_H
-#define LMP_FIX_NVE_ROM_H
+#ifndef LMP_FIX_NVT_ROM_H
+#define LMP_FIX_NVT_ROM_H
 
-#include "fix_nve.h"
+#include "fix_nh_rom.h"
 
 namespace LAMMPS_NS {
 
-class FixNVEROM : public FixNVE {
+class FixNVTROM : public FixNHROM {
  public:
-  FixNVEROM(class LAMMPS *, int, char **);
-
-  void initial_integrate(int) override;
-  void final_integrate() override;
-
-  //******************* ADDED ******************
-
-  void read_rob(std::string, double**);
-  void read_mean(std::string, double**);
-  void convert_physical_to_reduced(double *, double *, double *);
-  void convert_reduced_to_physical(double *, double *);
- 
- protected:
-
-   int modelorder;
-   double **phi;
-   double **mean;
-   double *A;
-   double *V;
-   double *X;
-
+  FixNVTROM(class LAMMPS *, int, char **);
 };
 
 }    // namespace LAMMPS_NS

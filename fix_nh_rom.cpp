@@ -12,7 +12,8 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#include "fix_nve_rom.h"
+
+#include "fix_nh_rom.h"
 
 #include "atom.h"
 #include "force.h"
@@ -35,40 +36,73 @@ using namespace FixConst;
 
 /* ---------------------------------------------------------------------- */
 
-FixNVEROM::FixNVEROM(LAMMPS *lmp, int narg, char **arg) :
-  FixNVE(lmp, narg, arg)
+FixNHROM::FixNHROM(LAMMPS *lmp, int narg, char **arg) :
+  FixNH(lmp, narg, arg)
 {
-  if (narg < 6) utils::missing_cmd_args(FLERR, "fix nve/rom", error);
+  int iarg = 3;
 
-  dynamic_group_allow = 1;
-  time_integrate = 1;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"model") == 0) {
+      if (iarg+4 > narg) utils::missing_cmd_args(FLERR, "fix nvt/nph/npt rom", error);
+      dynamic_group_allow = 1;
+      time_integrate = 1;
 
-  modelorder = utils::inumeric(FLERR,arg[3],false,lmp);
+      modelorder = utils::inumeric(FLERR,arg[iarg + 1],false,lmp);
 
-  int nlocal = atom->nlocal;
+      int nlocal = atom->nlocal;
 
-  phi = nullptr;
-  mean = nullptr;
-  A = nullptr;
-  V = nullptr;
-  X = nullptr;
+      phi = nullptr;
+      mean = nullptr;
+      A = nullptr;
+      V = nullptr;
+      X = nullptr;
 
-  memory->create(phi, nlocal * 3, modelorder, "FixNVEROM:phi");
-  memory->create(mean, nlocal * 3, 1, "FixNVEROM:mean");
-  memory->create(A, nlocal * 3, "FixNVEROM:A");
-  memory->create(V, nlocal * 3, "FixNVEROM:V");
-  memory->create(X, nlocal * 3, "FixNVEROM:X");
+      memory->create(phi, nlocal * 3, modelorder, "FixNHROM:phi");
+      memory->create(mean, nlocal * 3, 1, "FixNHROM:mean");
+      memory->create(A, nlocal * 3, "FixNHROM:A");
+      memory->create(V, nlocal * 3, "FixNHROM:V");
+      memory->create(X, nlocal * 3, "FixNHROM:X");
+      
+      read_rob(arg[iarg + 2], phi);
+      read_mean(arg[iarg + 3], mean);
+      
+      iarg += 4;
+    } else iarg++;
+  }
+  // if (narg < 6) utils::missing_cmd_args(FLERR, "fix nvt/nph/npt rom", error);
+
+  // dynamic_group_allow = 1;
+  // time_integrate = 1;
+
+  // modelorder = utils::inumeric(FLERR,arg[3],false,lmp);
+
+  // int nlocal = atom->nlocal;
+
+  // phi = nullptr;
+  // mean = nullptr;
+  // A = nullptr;
+  // V = nullptr;
+  // X = nullptr;
+
+  // memory->create(phi, nlocal * 3, modelorder, "FixNHROM:phi");
+  // memory->create(mean, nlocal * 3, 1, "FixNHROM:mean");
+  // memory->create(A, nlocal * 3, "FixNHROM:A");
+  // memory->create(V, nlocal * 3, "FixNHROM:V");
+  // memory->create(X, nlocal * 3, "FixNHROM:X");
   
-  read_rob(arg[4], phi);
-  read_mean(arg[5], mean);
+  // read_rob(arg[4], phi);
+  // read_mean(arg[5], mean);
+
 }
 
 /* ----------------------------------------------------------------------
-   allow for both per-type and per-atom mass
-------------------------------------------------------------------------- */
+   perform half-step update of velocities in ROM
+-----------------------------------------------------------------------*/
 
-void FixNVEROM::initial_integrate(int /*vflag*/)
+void FixNHROM::nve_v()
 {
+
+  // update v of atoms in group
 
   convert_physical_to_reduced(X, V, A);
 
@@ -81,6 +115,31 @@ void FixNVEROM::initial_integrate(int /*vflag*/)
   for (int i = 0; i < modelorder; i++) // dimension is modelorder
     if (mask[0] & groupbit) { // only works with mask[0]
       V[i] += dtf * A[i]; // changed from dtfm
+    }
+
+  convert_reduced_to_physical(X, V);
+
+}
+
+/* ----------------------------------------------------------------------
+   perform full-step update of position with ROM
+-----------------------------------------------------------------------*/
+
+void FixNHROM::nve_x()
+{
+
+  // update x of atoms in group
+
+  convert_physical_to_reduced(X, V, A);
+
+  // This section is heavily edited. Most atom tests have been moved to the convert functions
+
+  int *mask = atom->mask;
+  int nlocal = atom->nlocal;
+  if (igroup == atom->firstgroup) nlocal = atom->nfirst;
+
+  for (int i = 0; i < modelorder; i++) // dimension is modelorder
+    if (mask[0] & groupbit) { // only works with mask[0]
       X[i] += dtv * V[i];
     }
 
@@ -90,29 +149,7 @@ void FixNVEROM::initial_integrate(int /*vflag*/)
 
 /* ---------------------------------------------------------------------- */
 
-void FixNVEROM::final_integrate()
-{
-
-  convert_physical_to_reduced(X, V, A);
-
-  // This section is heavily edited. Most atom tests have been moved to the convert functions
-
-  int *mask = atom->mask;
-  int nlocal = atom->nlocal;
-  if (igroup == atom->firstgroup) nlocal = atom->nfirst;
-
-  for (int i = 0; i < modelorder; i++) // dimension is modelorder
-    if (mask[0] & groupbit) { // only works with mask[0]
-      V[i] += dtf * A[i]; // changed from dtfm
-    }
-
-  convert_reduced_to_physical(X, V);
-
-}
-
-/* ---------------------------------------------------------------------- */
-
-void FixNVEROM::read_rob(std::string robfile, double **robarray)
+void FixNHROM::read_rob(std::string robfile, double **robarray)
 {
   utils::logmesg(lmp, "Reading reduced-order basis file {}\n", robfile);
   const int nlocal = atom->nlocal;
@@ -136,7 +173,7 @@ void FixNVEROM::read_rob(std::string robfile, double **robarray)
 
 /* ---------------------------------------------------------------------- */
 
-void FixNVEROM::read_mean(std::string meansfile, double **meansarray)
+void FixNHROM::read_mean(std::string meansfile, double **meansarray)
 {
   utils::logmesg(lmp, "Reading ROM means file {}\n", meansfile);
   const int nlocal = atom->nlocal;
@@ -162,7 +199,7 @@ void FixNVEROM::read_mean(std::string meansfile, double **meansarray)
     order position, velocity, and acceleration vectors.
    ---------------------------------------------------------------------- */
 
-void FixNVEROM::convert_physical_to_reduced(double *rox, double *rov, double *roa)
+void FixNHROM::convert_physical_to_reduced(double *rox, double *rov, double *roa)
 {
   
   int atomid;
@@ -206,7 +243,7 @@ void FixNVEROM::convert_physical_to_reduced(double *rox, double *rov, double *ro
     order position and velocity vectors.
    ---------------------------------------------------------------------- */
 
-void FixNVEROM::convert_reduced_to_physical(double *rox, double *rov)
+void FixNHROM::convert_reduced_to_physical(double *rox, double *rov)
 {
   double **x = atom->x;
   double **v = atom->v;

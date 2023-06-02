@@ -111,7 +111,7 @@ void FixROB::end_of_step()
 
 void FixROB::post_run()
 {
-  // std::cout << "I made " << nsnapshots << " snapshots\n";
+  utils::logmesg(lmp, "Collected {} snapshots\n", nsnapshots);
 
   // std::cout << "I made it to the end! Here are the first three values I found:" << '\n';
   // std::cout << snapshots[0][268 + 272] << ", " << snapshots[1000][268 + 272] << ", " << snapshots[2000][268 + 272] << "\n\n";
@@ -183,6 +183,19 @@ void FixROB::post_run()
     error->one(FLERR, "Error writing reduced-order basis: {}", e.what());
   }
 
+  // saven singular values
+
+  VectorXd S = svd.singularValues();
+  try {
+    std::ofstream file("lambda.txt");
+    if (file.is_open()) {
+      for (int i = 0; i < S.size(); i++) {
+        file << S(i) << '\n';
+      }
+    }
+  } catch (std::exception &e) {
+    error->one(FLERR, "Error writing singular values: {}", e.what());
+  }
 
 }
 
