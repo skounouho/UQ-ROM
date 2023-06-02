@@ -20,21 +20,21 @@ FixStyle(nve/rom,FixNVEROM);
 #ifndef LMP_FIX_NVE_ROM_H
 #define LMP_FIX_NVE_ROM_H
 
-#include "fix.h"
+#include "fix_nve.h"
 
 namespace LAMMPS_NS {
 
-class FixNVEROM : public Fix {
+class FixNVEROM : public FixNVE {
  public:
   FixNVEROM(class LAMMPS *, int, char **);
 
-  int setmask() override;
-  void init() override;
+//   int setmask() override;
+//   void init() override;
   void initial_integrate(int) override;
   void final_integrate() override;
-  void initial_integrate_respa(int, int, int) override;
-  void final_integrate_respa(int, int) override;
-  void reset_dt() override;
+//   void initial_integrate_respa(int, int, int) override;
+//   void final_integrate_respa(int, int) override;
+//   void reset_dt() override;
 
 
   //******************* ADDED ******************
@@ -49,9 +49,9 @@ class FixNVEROM : public Fix {
   //**************** END ADDED *****************
  
  protected:
-  double dtv, dtf;
-  double *step_respa;
-  int mass_require;
+//   double dtv, dtf;
+//   double *step_respa;
+//   int mass_require;
 
    // *************************** ADDED ****************************
 

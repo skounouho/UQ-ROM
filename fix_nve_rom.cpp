@@ -23,7 +23,6 @@
 
 #include "domain.h"
 #include "memory.h"
-#include "text_file_reader.h"
 #include "error.h"
 #include <iostream>
 #include <fstream>
@@ -37,14 +36,12 @@ using namespace FixConst;
 /* ---------------------------------------------------------------------- */
 
 FixNVEROM::FixNVEROM(LAMMPS *lmp, int narg, char **arg) :
-  Fix(lmp, narg, arg)
+  FixNVE(lmp, narg, arg)
 {
   if (narg != 6) utils::missing_cmd_args(FLERR, "fix nve/rom", error);
 
   dynamic_group_allow = 1;
   time_integrate = 1;
-
-  // ****************** ADDED *********************
 
   modelorder = utils::inumeric(FLERR,arg[3],false,lmp);
 
@@ -64,32 +61,6 @@ FixNVEROM::FixNVEROM(LAMMPS *lmp, int narg, char **arg) :
   
   read_rob(arg[4]);
   read_mean(arg[5]);
-
-  // *************** END ADDED *******************
-}
-
-/* ---------------------------------------------------------------------- */
-
-int FixNVEROM::setmask()
-{
-  int mask = 0;
-  mask |= INITIAL_INTEGRATE;
-  mask |= FINAL_INTEGRATE;
-  mask |= INITIAL_INTEGRATE_RESPA;
-  mask |= FINAL_INTEGRATE_RESPA;
-  return mask;
-}
-
-/* ---------------------------------------------------------------------- */
-
-void FixNVEROM::init()
-{
-  dtv = update->dt;
-  dtf = 0.5 * update->dt * force->ftm2v;
-
-  if (utils::strmatch(update->integrate_style,"^respa"))
-    step_respa = (dynamic_cast<Respa *>(update->integrate))->step;
-  
 }
 
 /* ----------------------------------------------------------------------
@@ -105,26 +76,8 @@ void FixNVEROM::initial_integrate(int /*vflag*/)
   double **x = atom->x;
   double **v = atom->v;
   double **f = atom->f;
-  
-  //******************* ADDED ******************
-
-  double boxlo[3], boxhi[3];
-  boxlo[0] = domain->boxlo[0];
-  boxlo[1] = domain->boxlo[1];
-  boxlo[2] = domain->boxlo[2];
-  boxhi[0] = domain->boxhi[0];
-  boxhi[1] = domain->boxhi[1];
-  boxhi[2] = domain->boxhi[2];
-
-  double length_x = boxhi[0]-boxlo[0];
-  double length_y = boxhi[1]-boxlo[1];
-  double length_z = boxhi[2]-boxlo[2];
-
-  remove_periodic_boundary(length_x, length_y, length_z);
 
   convert_physical_to_reduced();
-
-  //**************** END ADDED *****************
 
   // This section is heavily edited. Most atom tests have been moved to the convert functions
 
@@ -137,13 +90,9 @@ void FixNVEROM::initial_integrate(int /*vflag*/)
       V[i] += dtf * A[i]; // changed from dtfm
       X[i] += dtv * V[i];
     }
-  
-  //******************* ADDED ******************
 
   convert_reduced_to_physical();
-  reinstate_periodic_boundary(length_x, length_y, length_z);
 
-  //**************** END ADDED *****************
 }
 
 /* ---------------------------------------------------------------------- */
@@ -157,11 +106,7 @@ void FixNVEROM::final_integrate()
   double **v = atom->v;
   double **f = atom->f;
 
-  //******************* ADDED ******************
-
   convert_physical_to_reduced();
-
-  //**************** END ADDED *****************
 
   // This section is heavily edited. Most atom tests have been moved to the convert functions
 
@@ -174,64 +119,16 @@ void FixNVEROM::final_integrate()
       V[i] += dtf * A[i]; // changed from dtfm
     }
 
-  //******************* ADDED ******************
-
   convert_reduced_to_physical();
 
-  //**************** END ADDED *****************
 }
 
 /* ---------------------------------------------------------------------- */
-
-void FixNVEROM::initial_integrate_respa(int vflag, int ilevel, int /*iloop*/)
-{
-  dtv = step_respa[ilevel];
-  dtf = 0.5 * step_respa[ilevel] * force->ftm2v;
-
-  // innermost level - NVE update of v and x
-  // all other levels - NVE update of v
-
-  if (ilevel == 0) initial_integrate(vflag);
-  else final_integrate();
-}
-
-/* ---------------------------------------------------------------------- */
-
-void FixNVEROM::final_integrate_respa(int ilevel, int /*iloop*/)
-{
-  dtf = 0.5 * step_respa[ilevel] * force->ftm2v;
-  final_integrate();
-}
-
-/* ---------------------------------------------------------------------- */
-
-void FixNVEROM::reset_dt()
-{
-  dtv = update->dt;
-  dtf = 0.5 * update->dt * force->ftm2v;
-}
-
-/* ---------------------------------------------------------------------- 
-    Consider combining the file reading functions into one
-   ---------------------------------------------------------------------- */
 
 void FixNVEROM::read_rob(std::string robfile)
 {
   utils::logmesg(lmp, "Reading reduced-order basis file {}\n", robfile);
   const int nlocal = atom->nlocal;
-
-  // try {
-  //   TextFileReader reader(file, "reduced-order basis");
-  //   for (int i = 0; i < nlocal * 3; i++) {
-  //     //reader.next_dvector(phi[i], modelorder);
-  //     ValueTokenizer values = reader.next_values(modelorder);
-  //     for (int j = 0; j < modelorder; j++) {
-  //       phi[i][j] = values.next_double();
-  //     }
-  //   }
-  // } catch (std::exception &e) {
-  //   error->one(FLERR, "Error reading file with reduced-order basis: {}", e.what());
-  // }
 
   try {
     std::ifstream file(robfile);
@@ -250,78 +147,33 @@ void FixNVEROM::read_rob(std::string robfile)
   }
 }
 
-/* ---------------------------------------------------------------------- 
-    Consider formating the mean matrix as a nlocal x 3 matrix
-   ---------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------- */
 
-void FixNVEROM::read_mean(std::string file)
+void FixNVEROM::read_mean(std::string meansfile)
 {
-  utils::logmesg(lmp, "Reading ROM means file {}\n", file);
+  utils::logmesg(lmp, "Reading ROM means file {}\n", meansfile);
   const int nlocal = atom->nlocal;
 
   try {
-    TextFileReader reader(file, "ROM means");
-    for (int i = 0; i < nlocal * 3; i++) {
-      reader.next_dvector(mean[i], 1);
+    std::ifstream file(meansfile);
+    std::string line;
+    if (file.is_open()) {
+      for (int i = 0; i < nlocal * 3; i++) {
+        std::getline(file, line);
+        std::stringstream ss(line);
+        ss >> mean[i][0];
+      }
     }
   } catch (std::exception &e) {
-    error->one(FLERR, "Error reading file with ROM means: {}", e.what());
+    error->one(FLERR, "Error reading ROM means: {}", e.what());
   }
+
 }
 
 /* ---------------------------------------------------------------------- 
-    Code from Hao Zhang. Consider:
-      - using in-built LAMMPS code to toggle periodic boundaries
-*/
-
-void FixNVEROM::remove_periodic_boundary(double length_x, double length_y, double length_z)
-{
-  double **x = atom->x;
-  int nlocal = atom->nlocal;
-
-  imageint *image = atom->image;
-  imageint ximage, yimage, zimage;
-
-  for (int i = 0; i < nlocal; i++){
-    ximage = image[i] & IMGMASK;
-    yimage = (image[i] >> IMGBITS) & IMGMASK;
-    zimage = image[i] >> IMG2BITS;
-
-    x[i][0] = x[i][0] + length_x * (ximage-512);
-    x[i][1] = x[i][1] + length_y * (yimage-512);
-    x[i][2] = x[i][2] + length_z * (zimage-512);
-  }
-}
-
-/* ---------------------------------------------------------------------- 
-    Code from Hao Zhang. Consider:
-      - using in-built LAMMPS code to toggle periodic boundaries
-      - try not to repeat this code from the previous function
-*/
-
-void FixNVEROM::reinstate_periodic_boundary(double length_x, double length_y, double length_z)
-{
-  double **x = atom->x;
-  int nlocal = atom->nlocal;
-
-  imageint *image = atom->image;
-  imageint ximage, yimage, zimage;
-  
-  for (int i=0; i<nlocal; i++){
-      ximage = image[i] & IMGMASK;
-      yimage = (image[i] >> IMGBITS) & IMGMASK;
-      zimage = image[i] >> IMG2BITS;
-
-      x[i][0] = x[i][0] - length_x * (ximage-512);
-      x[i][1] = x[i][1] - length_y * (yimage-512);
-      x[i][2] = x[i][2] - length_z * (zimage-512);
-  }
-}
-
-/* ---------------------------------------------------------------------- 
-    Code from Hao Zhang. Converts from physical to reduced-order space.
-    Assumes that tensors for reduced order X, V, and F are defined.
-*/
+    Converts from physical to reduced-order space. Assumes that tensors 
+    for reduced order X, V, and A are defined.
+   ---------------------------------------------------------------------- */
 
 void FixNVEROM::convert_physical_to_reduced()
 {
@@ -363,9 +215,9 @@ void FixNVEROM::convert_physical_to_reduced()
 }
 
 /* ---------------------------------------------------------------------- 
-    Code from Hao Zhang. Converts from physical to reduced-order space.
-    Assumes that tensors for reduced order X, V, and F are defined.
-*/
+    Converts from reduced-order to physical space. Assumes that tensors 
+    for reduced order X, V, and A are defined.
+   ---------------------------------------------------------------------- */
 
 void FixNVEROM::convert_reduced_to_physical()
 {
