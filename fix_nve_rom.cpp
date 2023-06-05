@@ -38,7 +38,7 @@ using namespace FixConst;
 FixNVEROM::FixNVEROM(LAMMPS *lmp, int narg, char **arg) :
   FixNVE(lmp, narg, arg)
 {
-  if (narg < 6) utils::missing_cmd_args(FLERR, "fix nve/rom", error);
+  if (narg < 5) utils::missing_cmd_args(FLERR, "fix nve/rom", error);
 
   dynamic_group_allow = 1;
   time_integrate = 1;
@@ -48,19 +48,29 @@ FixNVEROM::FixNVEROM(LAMMPS *lmp, int narg, char **arg) :
   int nlocal = atom->nlocal;
 
   phi = nullptr;
-  mean = nullptr;
   A = nullptr;
   V = nullptr;
   X = nullptr;
+  start = nullptr;
 
   memory->create(phi, nlocal * 3, modelorder, "FixNVEROM:phi");
-  memory->create(mean, nlocal * 3, 1, "FixNVEROM:mean");
   memory->create(A, nlocal * 3, "FixNVEROM:A");
   memory->create(V, nlocal * 3, "FixNVEROM:V");
   memory->create(X, nlocal * 3, "FixNVEROM:X");
+  memory->create(start, nlocal, 3, "FixNVEROM:start");
+
+  double **x = atom->x;
+  int *tag = atom->tag;
+  int atomid;
+
+  for (int i = 0; i < nlocal; i++) {
+    atomid = tag[i] - 1;
+    start[atomid][0] = x[i][0];
+    start[atomid][1] = x[i][1];
+    start[atomid][2] = x[i][2];
+  }
   
   read_rob(arg[4], phi);
-  read_mean(arg[5], mean);
 }
 
 /* ----------------------------------------------------------------------
@@ -134,29 +144,6 @@ void FixNVEROM::read_rob(std::string robfile, double **robarray)
   }
 }
 
-/* ---------------------------------------------------------------------- */
-
-void FixNVEROM::read_mean(std::string meansfile, double **meansarray)
-{
-  utils::logmesg(lmp, "Reading ROM means file {}\n", meansfile);
-  const int nlocal = atom->nlocal;
-
-  try {
-    std::ifstream file(meansfile);
-    std::string line;
-    if (file.is_open()) {
-      for (int i = 0; i < nlocal * 3; i++) {
-        std::getline(file, line);
-        std::stringstream ss(line);
-        ss >> meansarray[i][0];
-      }
-    }
-  } catch (std::exception &e) {
-    error->one(FLERR, "Error reading ROM means: {}", e.what());
-  }
-
-}
-
 /* ---------------------------------------------------------------------- 
     Converts from physical to reduced-order space. Inputs are the reduced
     order position, velocity, and acceleration vectors.
@@ -184,7 +171,7 @@ void FixNVEROM::convert_physical_to_reduced(double *rox, double *rov, double *ro
     if (rmass) {
       for (int j = 0; j < nlocal; j++){
         atomid = tag[j] - 1;
-        rox[i] += phi[atomid][i]* (x[j][0] - mean[atomid][0]) + phi[atomid+nlocal][i]* (x[j][1] - mean[atomid+nlocal][0]) + phi[atomid+nlocal*2][i]* (x[j][2] - mean[atomid+nlocal*2][0]);
+        rox[i] += phi[atomid][i]* (x[j][0] - start[atomid][0]) + phi[atomid+nlocal][i]* (x[j][1] - start[atomid][1]) + phi[atomid+nlocal*2][i]* (x[j][2] - start[atomid][2]);
         rov[i] += phi[atomid][i]*v[j][0] + phi[atomid+nlocal][i]*v[j][1] + phi[atomid+nlocal*2][i]*v[j][2];
         roa[i] += (phi[atomid][i]*f[j][0] + phi[atomid+nlocal][i]*f[j][1] + phi[atomid+nlocal*2][i]*f[j][2]) / rmass[j];                 
       }
@@ -192,7 +179,7 @@ void FixNVEROM::convert_physical_to_reduced(double *rox, double *rov, double *ro
     else {
       for (int j = 0; j < nlocal; j++){
         atomid = tag[j] - 1;
-        rox[i] += phi[atomid][i]* (x[j][0] - mean[atomid][0]) + phi[atomid+nlocal][i]* (x[j][1] - mean[atomid+nlocal][0]) + phi[atomid+nlocal*2][i]* (x[j][2] - mean[atomid+nlocal*2][0]);
+        rox[i] += phi[atomid][i]* (x[j][0] - start[atomid][0]) + phi[atomid+nlocal][i]* (x[j][1] - start[atomid][1]) + phi[atomid+nlocal*2][i]* (x[j][2] - start[atomid][2]);
         rov[i] += phi[atomid][i]*v[j][0] + phi[atomid+nlocal][i]*v[j][1] + phi[atomid+nlocal*2][i]*v[j][2];
         roa[i] += (phi[atomid][i]*f[j][0] + phi[atomid+nlocal][i]*f[j][1] + phi[atomid+nlocal*2][i]*f[j][2]) / mass[type[j]];                 
       }
@@ -216,9 +203,9 @@ void FixNVEROM::convert_reduced_to_physical(double *rox, double *rov)
   for (int i=0; i<nlocal; i++){
     int atomid = tag[i] - 1;
 
-    x[i][0] = mean[atomid][0];
-    x[i][1] = mean[atomid+nlocal][0];
-    x[i][2] = mean[atomid+2*nlocal][0];
+    x[i][0] = start[atomid][0];
+    x[i][1] = start[atomid][1];
+    x[i][2] = start[atomid][2];
 
     v[i][0] = 0.0;
     v[i][1] = 0.0;

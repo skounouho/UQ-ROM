@@ -42,10 +42,11 @@ class FixNVEROM : public FixNVE {
 
    int modelorder;
    double **phi;
-   double **mean;
+   double **start;
    double *A;
    double *V;
    double *X;
+   
 
 };
 
