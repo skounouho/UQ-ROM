@@ -11,39 +11,25 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#ifndef LMP_FIX_NH_ROM_H
-#define LMP_FIX_NH_ROM_H
+#ifdef FIX_CLASS
+// clang-format off
+FixStyle(npt/rom,FixNPTROM);
+// clang-format on
+#else
 
-#include "fix_nh.h"
+#ifndef LMP_FIX_NPT_ROM_H
+#define LMP_FIX_NPT_ROM_H
+
+#include "fix_nh_rom.h"
 
 namespace LAMMPS_NS {
 
-class FixNHROM : public FixNH {
+class FixNPTROM : public FixNHROM {
  public:
-  FixNHROM(class LAMMPS *, int, char **);
-
- protected:
-  double inertia;
-
-  void nve_v() override;
-  void nve_x() override;
-
-  //******************* ADDED ******************
-
-  void read_rob(std::string, double**);
-  void convert_physical_to_reduced(double *, double *, double *);
-  void convert_reduced_to_physical(double *, double *);
-
- protected:
-
-   int modelorder;
-   double **phi;
-   double **initial;
-   double *A;
-   double *V;
-   double *X;
+  FixNPTROM(class LAMMPS *, int, char **);
 };
 
 }    // namespace LAMMPS_NS
 
+#endif
 #endif

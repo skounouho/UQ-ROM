@@ -43,7 +43,7 @@ FixNHROM::FixNHROM(LAMMPS *lmp, int narg, char **arg) :
 
   while (iarg < narg) {
     if (strcmp(arg[iarg],"model") == 0) {
-      if (iarg+4 > narg) utils::missing_cmd_args(FLERR, "fix nvt/nph/npt rom", error);
+      if (iarg+3 > narg) utils::missing_cmd_args(FLERR, "fix nvt/nph/npt rom", error);
       dynamic_group_allow = 1;
       time_integrate = 1;
 
@@ -52,46 +52,33 @@ FixNHROM::FixNHROM(LAMMPS *lmp, int narg, char **arg) :
       int nlocal = atom->nlocal;
 
       phi = nullptr;
-      mean = nullptr;
+      initial = nullptr;
       A = nullptr;
       V = nullptr;
       X = nullptr;
 
       memory->create(phi, nlocal * 3, modelorder, "FixNHROM:phi");
-      memory->create(mean, nlocal * 3, 1, "FixNHROM:mean");
       memory->create(A, nlocal * 3, "FixNHROM:A");
       memory->create(V, nlocal * 3, "FixNHROM:V");
       memory->create(X, nlocal * 3, "FixNHROM:X");
+      memory->create(initial, nlocal, 3, "FixNVEROM:initial");
+
+      double **x = atom->x;
+      int *tag = atom->tag;
+      int atomid;
+
+      for (int i = 0; i < nlocal; i++) {
+        atomid = tag[i] - 1;
+        initial[atomid][0] = x[i][0];
+        initial[atomid][1] = x[i][1];
+        initial[atomid][2] = x[i][2];
+      }
       
       read_rob(arg[iarg + 2], phi);
-      read_mean(arg[iarg + 3], mean);
-      
-      iarg += 4;
+
+      iarg += 3;
     } else iarg++;
   }
-  // if (narg < 6) utils::missing_cmd_args(FLERR, "fix nvt/nph/npt rom", error);
-
-  // dynamic_group_allow = 1;
-  // time_integrate = 1;
-
-  // modelorder = utils::inumeric(FLERR,arg[3],false,lmp);
-
-  // int nlocal = atom->nlocal;
-
-  // phi = nullptr;
-  // mean = nullptr;
-  // A = nullptr;
-  // V = nullptr;
-  // X = nullptr;
-
-  // memory->create(phi, nlocal * 3, modelorder, "FixNHROM:phi");
-  // memory->create(mean, nlocal * 3, 1, "FixNHROM:mean");
-  // memory->create(A, nlocal * 3, "FixNHROM:A");
-  // memory->create(V, nlocal * 3, "FixNHROM:V");
-  // memory->create(X, nlocal * 3, "FixNHROM:X");
-  
-  // read_rob(arg[4], phi);
-  // read_mean(arg[5], mean);
 
 }
 
@@ -171,29 +158,6 @@ void FixNHROM::read_rob(std::string robfile, double **robarray)
   }
 }
 
-/* ---------------------------------------------------------------------- */
-
-void FixNHROM::read_mean(std::string meansfile, double **meansarray)
-{
-  utils::logmesg(lmp, "Reading ROM means file {}\n", meansfile);
-  const int nlocal = atom->nlocal;
-
-  try {
-    std::ifstream file(meansfile);
-    std::string line;
-    if (file.is_open()) {
-      for (int i = 0; i < nlocal * 3; i++) {
-        std::getline(file, line);
-        std::stringstream ss(line);
-        ss >> meansarray[i][0];
-      }
-    }
-  } catch (std::exception &e) {
-    error->one(FLERR, "Error reading ROM means: {}", e.what());
-  }
-
-}
-
 /* ---------------------------------------------------------------------- 
     Converts from physical to reduced-order space. Inputs are the reduced
     order position, velocity, and acceleration vectors.
@@ -221,7 +185,7 @@ void FixNHROM::convert_physical_to_reduced(double *rox, double *rov, double *roa
     if (rmass) {
       for (int j = 0; j < nlocal; j++){
         atomid = tag[j] - 1;
-        rox[i] += phi[atomid][i]* (x[j][0] - mean[atomid][0]) + phi[atomid+nlocal][i]* (x[j][1] - mean[atomid+nlocal][0]) + phi[atomid+nlocal*2][i]* (x[j][2] - mean[atomid+nlocal*2][0]);
+        rox[i] += phi[atomid][i]* (x[j][0] - initial[atomid][0]) + phi[atomid+nlocal][i]* (x[j][1] - initial[atomid][1]) + phi[atomid+nlocal*2][i]* (x[j][2] - initial[atomid][2]);
         rov[i] += phi[atomid][i]*v[j][0] + phi[atomid+nlocal][i]*v[j][1] + phi[atomid+nlocal*2][i]*v[j][2];
         roa[i] += (phi[atomid][i]*f[j][0] + phi[atomid+nlocal][i]*f[j][1] + phi[atomid+nlocal*2][i]*f[j][2]) / rmass[j];                 
       }
@@ -229,7 +193,7 @@ void FixNHROM::convert_physical_to_reduced(double *rox, double *rov, double *roa
     else {
       for (int j = 0; j < nlocal; j++){
         atomid = tag[j] - 1;
-        rox[i] += phi[atomid][i]* (x[j][0] - mean[atomid][0]) + phi[atomid+nlocal][i]* (x[j][1] - mean[atomid+nlocal][0]) + phi[atomid+nlocal*2][i]* (x[j][2] - mean[atomid+nlocal*2][0]);
+        rox[i] += phi[atomid][i]* (x[j][0] - initial[atomid][0]) + phi[atomid+nlocal][i]* (x[j][1] - initial[atomid][1]) + phi[atomid+nlocal*2][i]* (x[j][2] - initial[atomid][2]);
         rov[i] += phi[atomid][i]*v[j][0] + phi[atomid+nlocal][i]*v[j][1] + phi[atomid+nlocal*2][i]*v[j][2];
         roa[i] += (phi[atomid][i]*f[j][0] + phi[atomid+nlocal][i]*f[j][1] + phi[atomid+nlocal*2][i]*f[j][2]) / mass[type[j]];                 
       }
@@ -253,9 +217,9 @@ void FixNHROM::convert_reduced_to_physical(double *rox, double *rov)
   for (int i=0; i<nlocal; i++){
     int atomid = tag[i] - 1;
 
-    x[i][0] = mean[atomid][0];
-    x[i][1] = mean[atomid+nlocal][0];
-    x[i][2] = mean[atomid+2*nlocal][0];
+    x[i][0] = initial[atomid][0];
+    x[i][1] = initial[atomid][1];
+    x[i][2] = initial[atomid][2];
 
     v[i][0] = 0.0;
     v[i][1] = 0.0;

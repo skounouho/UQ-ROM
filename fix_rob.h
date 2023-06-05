@@ -31,7 +31,6 @@ class FixROB : public Fix {
   FixROB(class LAMMPS *, int, char **);
 
   int setmask() override;
-  void init() override;
   void end_of_step() override;
   void post_run() override;
   Eigen::MatrixXd ConvertToEigenMatrix(double **, int, int);
@@ -41,9 +40,8 @@ class FixROB : public Fix {
    int nsnapshots;
    double **snapshots;
    double **phi;
-   double **means;
+   double **initial;
    std::string robfilename;
-   std::string meanfilename;
 
 };
 

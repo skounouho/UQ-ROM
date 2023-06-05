@@ -34,7 +34,6 @@ class FixNVEROM : public FixNVE {
   //******************* ADDED ******************
 
   void read_rob(std::string, double**);
-  void read_mean(std::string, double**);
   void convert_physical_to_reduced(double *, double *, double *);
   void convert_reduced_to_physical(double *, double *);
  
@@ -42,7 +41,7 @@ class FixNVEROM : public FixNVE {
 
    int modelorder;
    double **phi;
-   double **start;
+   double **initial;
    double *A;
    double *V;
    double *X;

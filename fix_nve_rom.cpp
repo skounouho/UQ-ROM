@@ -51,13 +51,13 @@ FixNVEROM::FixNVEROM(LAMMPS *lmp, int narg, char **arg) :
   A = nullptr;
   V = nullptr;
   X = nullptr;
-  start = nullptr;
+  initial = nullptr;
 
   memory->create(phi, nlocal * 3, modelorder, "FixNVEROM:phi");
   memory->create(A, nlocal * 3, "FixNVEROM:A");
   memory->create(V, nlocal * 3, "FixNVEROM:V");
   memory->create(X, nlocal * 3, "FixNVEROM:X");
-  memory->create(start, nlocal, 3, "FixNVEROM:start");
+  memory->create(initial, nlocal, 3, "FixNVEROM:initial");
 
   double **x = atom->x;
   int *tag = atom->tag;
@@ -65,9 +65,9 @@ FixNVEROM::FixNVEROM(LAMMPS *lmp, int narg, char **arg) :
 
   for (int i = 0; i < nlocal; i++) {
     atomid = tag[i] - 1;
-    start[atomid][0] = x[i][0];
-    start[atomid][1] = x[i][1];
-    start[atomid][2] = x[i][2];
+    initial[atomid][0] = x[i][0];
+    initial[atomid][1] = x[i][1];
+    initial[atomid][2] = x[i][2];
   }
   
   read_rob(arg[4], phi);
@@ -171,7 +171,7 @@ void FixNVEROM::convert_physical_to_reduced(double *rox, double *rov, double *ro
     if (rmass) {
       for (int j = 0; j < nlocal; j++){
         atomid = tag[j] - 1;
-        rox[i] += phi[atomid][i]* (x[j][0] - start[atomid][0]) + phi[atomid+nlocal][i]* (x[j][1] - start[atomid][1]) + phi[atomid+nlocal*2][i]* (x[j][2] - start[atomid][2]);
+        rox[i] += phi[atomid][i]* (x[j][0] - initial[atomid][0]) + phi[atomid+nlocal][i]* (x[j][1] - initial[atomid][1]) + phi[atomid+nlocal*2][i]* (x[j][2] - initial[atomid][2]);
         rov[i] += phi[atomid][i]*v[j][0] + phi[atomid+nlocal][i]*v[j][1] + phi[atomid+nlocal*2][i]*v[j][2];
         roa[i] += (phi[atomid][i]*f[j][0] + phi[atomid+nlocal][i]*f[j][1] + phi[atomid+nlocal*2][i]*f[j][2]) / rmass[j];                 
       }
@@ -179,7 +179,7 @@ void FixNVEROM::convert_physical_to_reduced(double *rox, double *rov, double *ro
     else {
       for (int j = 0; j < nlocal; j++){
         atomid = tag[j] - 1;
-        rox[i] += phi[atomid][i]* (x[j][0] - start[atomid][0]) + phi[atomid+nlocal][i]* (x[j][1] - start[atomid][1]) + phi[atomid+nlocal*2][i]* (x[j][2] - start[atomid][2]);
+        rox[i] += phi[atomid][i]* (x[j][0] - initial[atomid][0]) + phi[atomid+nlocal][i]* (x[j][1] - initial[atomid][1]) + phi[atomid+nlocal*2][i]* (x[j][2] - initial[atomid][2]);
         rov[i] += phi[atomid][i]*v[j][0] + phi[atomid+nlocal][i]*v[j][1] + phi[atomid+nlocal*2][i]*v[j][2];
         roa[i] += (phi[atomid][i]*f[j][0] + phi[atomid+nlocal][i]*f[j][1] + phi[atomid+nlocal*2][i]*f[j][2]) / mass[type[j]];                 
       }
@@ -203,9 +203,9 @@ void FixNVEROM::convert_reduced_to_physical(double *rox, double *rov)
   for (int i=0; i<nlocal; i++){
     int atomid = tag[i] - 1;
 
-    x[i][0] = start[atomid][0];
-    x[i][1] = start[atomid][1];
-    x[i][2] = start[atomid][2];
+    x[i][0] = initial[atomid][0];
+    x[i][1] = initial[atomid][1];
+    x[i][2] = initial[atomid][2];
 
     v[i][0] = 0.0;
     v[i][1] = 0.0;

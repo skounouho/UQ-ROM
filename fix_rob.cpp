@@ -40,14 +40,13 @@ using namespace FixConst;
 FixROB::FixROB(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg)
 {
-  if (narg != 7) utils::missing_cmd_args(FLERR, "fix rob", error);
+  if (narg < 6) utils::missing_cmd_args(FLERR, "fix rob", error);
 
   nevery = utils::inumeric(FLERR,arg[3],false,lmp);
   if (nevery <= 0)
     error->all(FLERR,"Illegal fix rob nevery value: {}", nevery);
   
   robfilename = utils::strdup(arg[5]);
-  meanfilename = utils::strdup(arg[6]);
 
   int nlocal = atom->nlocal;
 
@@ -55,12 +54,22 @@ FixROB::FixROB(LAMMPS *lmp, int narg, char **arg) :
     else modelorder = utils::inumeric(FLERR,arg[4],false,lmp);
 
   phi = nullptr;
-  means = nullptr;
   snapshots = nullptr;
 
   memory->create(phi, nlocal * 3, modelorder, "FixROB:phi");
-  memory->create(means, nlocal * 3, 1, "FixROB:means");
   memory->create(snapshots, 1, nlocal * 3, "FixROB:snapshots");
+  memory->create(initial, nlocal, 3, "FixROB:initial");
+
+  double **x = atom->x;
+  int *tag = atom->tag;
+  int atomid;
+
+  for (int i = 0; i < nlocal; i++) {
+    atomid = tag[i] - 1;
+    initial[atomid][0] = x[i][0];
+    initial[atomid][1] = x[i][1];
+    initial[atomid][2] = x[i][2];
+  }
 
   nsnapshots = 0;
 }
@@ -73,13 +82,6 @@ int FixROB::setmask()
   mask |= END_OF_STEP;
   mask |= POST_RUN;
   return mask;
-}
-
-/* ---------------------------------------------------------------------- */
-
-void FixROB::init()
-{
-  end_of_step();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -113,44 +115,15 @@ void FixROB::post_run()
 {
   utils::logmesg(lmp, "Collected {} snapshots\n", nsnapshots);
 
-  // std::cout << "I made it to the end! Here are the first three values I found:" << '\n';
-  // std::cout << snapshots[0][268 + 272] << ", " << snapshots[1000][268 + 272] << ", " << snapshots[2000][268 + 272] << "\n\n";
-
-  // calculate means
+  // shift positions by initial
 
   int nlocal = atom->nlocal;
 
-  for (int i = 0; i < nlocal * 3; i++) {
-    means[i][0] = 0;
+  for (int i = 0; i < nlocal; i++) {
     for (int j = 0; j < nsnapshots; j++) {
-      means[i][0] += snapshots[j][i];
-    }
-    means[i][0] = means[i][0] / nsnapshots;
-  }
-
-  // output mean
-  
-  try {
-    std::ofstream file(meanfilename);
-    if (file.is_open()) {
-      for (int i = 0; i < nlocal * 3; i++) {
-        file << means[i][0] << '\n';
-      }
-    }
-  }
-  catch (std::exception &e) {
-    error->one(FLERR, "Error writing means: {}", e.what());
-  }
-  
-
-  // std::cout << "I made past the means! Here are the first three values I found:" << '\n';
-  // std::cout << means[0][0] << ", " << means[1][0] << ", " << means[2][0] << "\n\n";
-
-  // subtract means
-
-  for (int i = 0; i < nlocal * 3; i++) {
-    for (int j = 0; j < nsnapshots; j++) {
-      snapshots[j][i] = snapshots[j][i] - means[i][0];
+      snapshots[j][i] = snapshots[j][i] - initial[i][0];
+      snapshots[j][i + nlocal] = snapshots[j][i + nlocal] - initial[i][1];
+      snapshots[j][i + nlocal*2] = snapshots[j][i + nlocal*2] - initial[i][2];
     }
   }
 
@@ -158,15 +131,8 @@ void FixROB::post_run()
 
   MatrixXd snapshotmatrix = ConvertToEigenMatrix(snapshots, nsnapshots, nlocal * 3);
   snapshotmatrix.transposeInPlace();
-  // snapshotmatrix /= sqrt(nsnapshots - 1); // normalizing
   Eigen::BDCSVD<Eigen::MatrixXd> svd(snapshotmatrix, Eigen::ComputeFullU);
   MatrixXd U = svd.matrixU();
-
-  // Eigen::CompleteOrthogonalDecomposition<Eigen::MatrixXd> pod(snapshotmatrix);
-  // MatrixXd U = pod.householderQ();
-
-  // std::cout << svd.singularValues() << '\n';
-  // std::cout << svd.rank() << '\n';;
 
   try {
     std::ofstream file(robfilename);
@@ -183,7 +149,7 @@ void FixROB::post_run()
     error->one(FLERR, "Error writing reduced-order basis: {}", e.what());
   }
 
-  // saven singular values
+  // save singular values
 
   VectorXd S = svd.singularValues();
   try {
