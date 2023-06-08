@@ -22,6 +22,13 @@ class FixNHROM : public FixNH {
  public:
   FixNHROM(class LAMMPS *, int, char **);
 
+  int modelorder;
+  double **phi;
+  double **x0;         // initial position of particles
+  double *y;           // reduced order position
+  double *y_dot;       // reduced order velocity
+  double *y_dot_dot;   // reduced order acceleration 
+
  protected:
   double inertia;
 
@@ -30,18 +37,12 @@ class FixNHROM : public FixNH {
 
   //******************* ADDED ******************
 
+  // helper methods
+  
   void read_rob(std::string, double**);
-  void convert_physical_to_reduced(double *, double *, double *);
-  void convert_reduced_to_physical(double *, double *);
-
- protected:
-
-   int modelorder;
-   double **phi;
-   double **initial;
-   double *A;
-   double *V;
-   double *X;
+  void compute_reduced_variables(int);
+  void update_physical_variables(int);
+   
 };
 
 }    // namespace LAMMPS_NS

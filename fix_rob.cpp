@@ -23,8 +23,10 @@
 
 #include "memory.h"
 #include "error.h"
+#include "read_dump.h"
 #include <fstream>
-#include <Eigen/Dense>
+#include <Eigen/Core>
+#include <Eigen/SVD>
 
 #include "iostream" // for debugging
 
@@ -45,33 +47,38 @@ FixROB::FixROB(LAMMPS *lmp, int narg, char **arg) :
   nevery = utils::inumeric(FLERR,arg[3],false,lmp);
   if (nevery <= 0)
     error->all(FLERR,"Illegal fix rob nevery value: {}", nevery);
+
+  int nlocal = atom->nlocal;
+  fullorderflag = 0;
+
+  if (strcmp(arg[4], "full") == 0) fullorderflag = 1;
+    else modelorder = utils::inumeric(FLERR,arg[4],false,lmp);
   
   robfilename = utils::strdup(arg[5]);
 
-  int nlocal = atom->nlocal;
+  // create arrays
 
-  if (strcmp(arg[4], "full") == 0)  modelorder = nlocal * 3;
-    else modelorder = utils::inumeric(FLERR,arg[4],false,lmp);
-
-  phi = nullptr;
   snapshots = nullptr;
+  x0 = nullptr;
 
-  memory->create(phi, nlocal * 3, modelorder, "FixROB:phi");
   memory->create(snapshots, 1, nlocal * 3, "FixROB:snapshots");
-  memory->create(initial, nlocal, 3, "FixROB:initial");
+  memory->create(x0, nlocal, 3, "FixROB:x0");
 
-  double **x = atom->x;
+  double **xinit = atom->x;
   int *tag = atom->tag;
-  int atomid;
+  int iatom;
 
   for (int i = 0; i < nlocal; i++) {
-    atomid = tag[i] - 1;
-    initial[atomid][0] = x[i][0];
-    initial[atomid][1] = x[i][1];
-    initial[atomid][2] = x[i][2];
+    iatom = tag[i] - 1;
+    x0[iatom][0] = xinit[i][0];
+    x0[iatom][1] = xinit[i][1];
+    x0[iatom][2] = xinit[i][2];
   }
 
+  // initialize snapshot count
+
   nsnapshots = 0;
+  
 }
 
 /* ---------------------------------------------------------------------- */
@@ -89,8 +96,7 @@ int FixROB::setmask()
 void FixROB::end_of_step()
 {
 
-  int atomid;
-
+  int iatom;
   double **x = atom->x;
   int *tag = atom->tag;
   int nlocal = atom->nlocal;
@@ -99,13 +105,15 @@ void FixROB::end_of_step()
     memory->grow(snapshots, nsnapshots + 1, nlocal * 3, "FixROB:snapshots");
   }
 
+  // shift by initial position and save
+
   for (int i = 0; i < nlocal; i++) {
-    atomid = tag[i] - 1;
-    snapshots[nsnapshots][atomid] = x[i][0];
-    snapshots[nsnapshots][atomid + nlocal] = x[i][1];
-    snapshots[nsnapshots][atomid + nlocal*2] = x[i][2];
+    iatom = tag[i] - 1;
+    snapshots[nsnapshots][iatom] = x[i][0] - x0[iatom][0];
+    snapshots[nsnapshots][iatom + nlocal] = x[i][1] - x0[iatom][1];
+    snapshots[nsnapshots][iatom + nlocal*2] = x[i][2] - x0[iatom][2];
   }
-  
+
   nsnapshots++;
 }
 
@@ -113,56 +121,8 @@ void FixROB::end_of_step()
 
 void FixROB::post_run()
 {
-  utils::logmesg(lmp, "Collected {} snapshots\n", nsnapshots);
-
-  // shift positions by initial
-
-  int nlocal = atom->nlocal;
-
-  for (int i = 0; i < nlocal; i++) {
-    for (int j = 0; j < nsnapshots; j++) {
-      snapshots[j][i] = snapshots[j][i] - initial[i][0];
-      snapshots[j][i + nlocal] = snapshots[j][i + nlocal] - initial[i][1];
-      snapshots[j][i + nlocal*2] = snapshots[j][i + nlocal*2] - initial[i][2];
-    }
-  }
-
-  // convert data to Eigen matrix
-
-  MatrixXd snapshotmatrix = ConvertToEigenMatrix(snapshots, nsnapshots, nlocal * 3);
-  snapshotmatrix.transposeInPlace();
-  Eigen::BDCSVD<Eigen::MatrixXd> svd(snapshotmatrix, Eigen::ComputeFullU);
-  MatrixXd U = svd.matrixU();
-
-  try {
-    std::ofstream file(robfilename);
-    if (file.is_open()) {
-      for (int i = 0; i < nlocal * 3; i++) {
-        file << U(i, 0); // write first values
-        for (int j = 1; j < modelorder; j++) {
-          file << " " << U(i, j);
-        }
-        file << '\n';
-      }
-    }
-  } catch (std::exception &e) {
-    error->one(FLERR, "Error writing reduced-order basis: {}", e.what());
-  }
-
-  // save singular values
-
-  VectorXd S = svd.singularValues();
-  try {
-    std::ofstream file("lambda.txt");
-    if (file.is_open()) {
-      for (int i = 0; i < S.size(); i++) {
-        file << S(i) << '\n';
-      }
-    }
-  } catch (std::exception &e) {
-    error->one(FLERR, "Error writing singular values: {}", e.what());
-  }
-
+  BDCSVD<MatrixXd> svd = compute_svd();
+  write_phi(svd);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -173,4 +133,63 @@ Eigen::MatrixXd FixROB::ConvertToEigenMatrix(double **data, int rows, int column
     for (int i = 0; i < rows; ++i)
         eMatrix.row(i) = Eigen::VectorXd::Map(&data[i][0], columns);
     return eMatrix;
+}
+
+/* ---------------------------------------------------------------------- */
+
+Eigen::BDCSVD<MatrixXd> FixROB::compute_svd()
+{
+  int nlocal = atom->nlocal;
+  utils::logmesg(lmp, "\nCollected {} snapshots\n", nsnapshots);
+
+  // convert data to Eigen matrix
+
+  MatrixXd snapshotmatrix = ConvertToEigenMatrix(snapshots, nsnapshots, nlocal * 3);
+
+  // tranpose and compute singular value decomposition
+
+  snapshotmatrix.transposeInPlace();
+  Eigen::BDCSVD<Eigen::MatrixXd> svd(snapshotmatrix, Eigen::ComputeThinU);
+
+  return svd;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixROB::write_phi(Eigen::BDCSVD<Eigen::MatrixXd> svd) {
+  int i,j;
+  int nlocal = atom->nlocal;
+
+  // get u matrix of svd [X] = [U][S][V]'
+
+  MatrixXd U = svd.matrixU();
+  if (fullorderflag) modelorder = nsnapshots;
+  else if (modelorder > nsnapshots) modelorder = nsnapshots; // cap rank at number of snapshots
+
+  // get singular values
+
+  VectorXd S = svd.singularValues();
+  utils::logmesg(lmp, "The rank is approximately {}\n", svd.nonzeroSingularValues());
+
+  // print result to file
+
+  try {
+    std::ofstream file(robfilename);
+    file << std::setprecision(16);
+    if (file.is_open()) {
+      for (i = 0; i < nlocal * 3; i++) {
+        file << U(i,0); // write first values
+        for (j = 1; j < modelorder; j++) {
+          file << " " << U(i,j);
+        }
+        file << '\n';
+      }
+      file << "\n# singular values\n";
+      for (i = 0; i < S.size(); i++) {
+        file << S(i) << " ";
+      }
+    }
+  } catch (std::exception &e) {
+    error->one(FLERR, "Error writing reduced-order basis: {}", e.what());
+  }
 }

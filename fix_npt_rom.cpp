@@ -14,7 +14,6 @@
 #include "fix_npt_rom.h"
 
 #include "error.h"
-#include "group.h"
 #include "modify.h"
 
 using namespace LAMMPS_NS;

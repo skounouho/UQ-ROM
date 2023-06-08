@@ -45,29 +45,33 @@ FixNVEROM::FixNVEROM(LAMMPS *lmp, int narg, char **arg) :
 
   modelorder = utils::inumeric(FLERR,arg[3],false,lmp);
 
+  // create arrays
+
   int nlocal = atom->nlocal;
 
   phi = nullptr;
-  A = nullptr;
-  V = nullptr;
-  X = nullptr;
-  initial = nullptr;
+  y = nullptr;
+  y_dot = nullptr;
+  y_dot_dot = nullptr;  
+  x0 = nullptr;
 
   memory->create(phi, nlocal * 3, modelorder, "FixNVEROM:phi");
-  memory->create(A, nlocal * 3, "FixNVEROM:A");
-  memory->create(V, nlocal * 3, "FixNVEROM:V");
-  memory->create(X, nlocal * 3, "FixNVEROM:X");
-  memory->create(initial, nlocal, 3, "FixNVEROM:initial");
+  memory->create(y_dot_dot, nlocal * 3, "FixNVEROM:y_dot_dot");
+  memory->create(y_dot, nlocal * 3, "FixNVEROM:y_dot");
+  memory->create(y, nlocal * 3, "FixNVEROM:y");
+  memory->create(x0, nlocal, 3, "FixNVEROM:x0");
 
-  double **x = atom->x;
+  // save initial atom positions
+
+  double **xinit = atom->x;
   int *tag = atom->tag;
-  int atomid;
+  int iatom;
 
   for (int i = 0; i < nlocal; i++) {
-    atomid = tag[i] - 1;
-    initial[atomid][0] = x[i][0];
-    initial[atomid][1] = x[i][1];
-    initial[atomid][2] = x[i][2];
+    iatom = tag[i] - 1;
+    x0[iatom][0] = xinit[i][0];
+    x0[iatom][1] = xinit[i][1];
+    x0[iatom][2] = xinit[i][2];
   }
   
   read_rob(arg[4], phi);
@@ -79,48 +83,49 @@ FixNVEROM::FixNVEROM(LAMMPS *lmp, int narg, char **arg) :
 
 void FixNVEROM::initial_integrate(int /*vflag*/)
 {
-
-  convert_physical_to_reduced(X, V, A);
-
-  // This section is heavily edited. Most atom tests have been moved to the convert functions
-
+  int xflag = 1;
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
   if (igroup == atom->firstgroup) nlocal = atom->nfirst;
+  
+  compute_reduced_variables(xflag);
+
+  // This section is heavily edited. Most atom tests have been moved to the convert functions
 
   for (int i = 0; i < modelorder; i++) // dimension is modelorder
     if (mask[0] & groupbit) { // only works with mask[0]
-      V[i] += dtf * A[i]; // changed from dtfm
-      X[i] += dtv * V[i];
+      y_dot[i] += dtf * y_dot_dot[i]; // changed from dtfm
+      y[i] += dtv * y_dot[i];
     }
 
-  convert_reduced_to_physical(X, V);
-
+  update_physical_variables(xflag);
 }
 
 /* ---------------------------------------------------------------------- */
 
 void FixNVEROM::final_integrate()
 {
-
-  convert_physical_to_reduced(X, V, A);
-
-  // This section is heavily edited. Most atom tests have been moved to the convert functions
-
+  int xflag = 0;
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
   if (igroup == atom->firstgroup) nlocal = atom->nfirst;
 
+  compute_reduced_variables(xflag);
+
+  // This section is heavily edited. Most atom tests have been moved to the convert functions
+
   for (int i = 0; i < modelorder; i++) // dimension is modelorder
     if (mask[0] & groupbit) { // only works with mask[0]
-      V[i] += dtf * A[i]; // changed from dtfm
+      y_dot[i] += dtf * y_dot_dot[i]; // changed from dtfm
     }
 
-  convert_reduced_to_physical(X, V);
+  update_physical_variables(xflag);
 
 }
 
-/* ---------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------- 
+    Reads the reduced-order basis from a designated file.
+   ---------------------------------------------------------------------- */
 
 void FixNVEROM::read_rob(std::string robfile, double **robarray)
 {
@@ -145,15 +150,15 @@ void FixNVEROM::read_rob(std::string robfile, double **robarray)
 }
 
 /* ---------------------------------------------------------------------- 
-    Converts from physical to reduced-order space. Inputs are the reduced
-    order position, velocity, and acceleration vectors.
+    Converts from physical to reduced-order space. Updates y, y_dot, and
+    y_dot_dot during initial integration, and y_dot and y_dot_dot during
+    final integration.
    ---------------------------------------------------------------------- */
 
-void FixNVEROM::convert_physical_to_reduced(double *rox, double *rov, double *roa)
+void FixNVEROM::compute_reduced_variables(int xflag)
 {
   
-  int atomid;
-  
+  int i,j,iatom;
   double **x = atom->x;
   double **v = atom->v;
   double **f = atom->f;
@@ -163,25 +168,47 @@ void FixNVEROM::convert_physical_to_reduced(double *rox, double *rov, double *ro
   int *tag = atom->tag;
   int nlocal = atom->nlocal;
 
-  for (int i = 0; i < modelorder; i++){
-    rox[i] = 0.0;
-    rov[i] = 0.0;
-    roa[i] = 0.0;
+  for (j = 0; j < modelorder; j++){
+    if (xflag) y[j] = 0;
+    y_dot[j] = 0;
+    y_dot_dot[j] = 0.0;
 
     if (rmass) {
-      for (int j = 0; j < nlocal; j++){
-        atomid = tag[j] - 1;
-        rox[i] += phi[atomid][i]* (x[j][0] - initial[atomid][0]) + phi[atomid+nlocal][i]* (x[j][1] - initial[atomid][1]) + phi[atomid+nlocal*2][i]* (x[j][2] - initial[atomid][2]);
-        rov[i] += phi[atomid][i]*v[j][0] + phi[atomid+nlocal][i]*v[j][1] + phi[atomid+nlocal*2][i]*v[j][2];
-        roa[i] += (phi[atomid][i]*f[j][0] + phi[atomid+nlocal][i]*f[j][1] + phi[atomid+nlocal*2][i]*f[j][2]) / rmass[j];                 
+      for (i = 0; i < nlocal; i++){
+        iatom = tag[i] - 1;
+
+        if (xflag) {
+          y[j] += phi[iatom][j]                * (x[i][0] - x0[iatom][0]);
+          y[j] += phi[iatom + nlocal][j]       * (x[i][1] - x0[iatom][1]);
+          y[j] += phi[iatom + nlocal*2][j]     * (x[i][2] - x0[iatom][2]);
+        }
+
+        y_dot[j] += phi[iatom][j]              * v[i][0];
+        y_dot[j] += phi[iatom + nlocal][j]     * v[i][1];
+        y_dot[j] += phi[iatom + nlocal*2][j]   * v[i][2];
+
+        y_dot_dot[j] += phi[iatom][j]          * f[i][0] / rmass[i];
+        y_dot_dot[j] += phi[iatom+nlocal][j]   * f[i][1] / rmass[i];
+        y_dot_dot[j] += phi[iatom+nlocal*2][j] * f[i][2] / rmass[i];                 
       }
     }
     else {
-      for (int j = 0; j < nlocal; j++){
-        atomid = tag[j] - 1;
-        rox[i] += phi[atomid][i]* (x[j][0] - initial[atomid][0]) + phi[atomid+nlocal][i]* (x[j][1] - initial[atomid][1]) + phi[atomid+nlocal*2][i]* (x[j][2] - initial[atomid][2]);
-        rov[i] += phi[atomid][i]*v[j][0] + phi[atomid+nlocal][i]*v[j][1] + phi[atomid+nlocal*2][i]*v[j][2];
-        roa[i] += (phi[atomid][i]*f[j][0] + phi[atomid+nlocal][i]*f[j][1] + phi[atomid+nlocal*2][i]*f[j][2]) / mass[type[j]];                 
+      for (i = 0; i < nlocal; i++){
+        iatom = tag[i] - 1;
+
+        if (xflag) {
+          y[j] += phi[iatom][j]                * (x[i][0] - x0[iatom][0]);
+          y[j] += phi[iatom + nlocal][j]       * (x[i][1] - x0[iatom][1]);
+          y[j] += phi[iatom + nlocal*2][j]     * (x[i][2] - x0[iatom][2]);
+        }
+
+        y_dot[j] += phi[iatom][j]              * v[i][0];
+        y_dot[j] += phi[iatom + nlocal][j]     * v[i][1];
+        y_dot[j] += phi[iatom + nlocal*2][j]   * v[i][2];
+
+        y_dot_dot[j] += phi[iatom][j]          * f[i][0] / mass[type[i]];
+        y_dot_dot[j] += phi[iatom+nlocal][j]   * f[i][1] / mass[type[i]];
+        y_dot_dot[j] += phi[iatom+nlocal*2][j] * f[i][2] / mass[type[i]];                 
       }
     }
 
@@ -189,36 +216,42 @@ void FixNVEROM::convert_physical_to_reduced(double *rox, double *rov, double *ro
 }
 
 /* ---------------------------------------------------------------------- 
-    Converts from reduced-order to physical space. Inputs are the reduced
-    order position and velocity vectors.
+    Converts from reduced-order to physical space. Updates x and v during
+    initial integration and only v during final integration.
    ---------------------------------------------------------------------- */
 
-void FixNVEROM::convert_reduced_to_physical(double *rox, double *rov)
+void FixNVEROM::update_physical_variables(int xflag)
 {
+  int i,j,iatom;
   double **x = atom->x;
   double **v = atom->v;
   int *tag = atom->tag;
   int nlocal = atom->nlocal;
 
-  for (int i=0; i<nlocal; i++){
-    int atomid = tag[i] - 1;
+  for (i = 0; i < nlocal; i++){
+    iatom = tag[i] - 1;
 
-    x[i][0] = initial[atomid][0];
-    x[i][1] = initial[atomid][1];
-    x[i][2] = initial[atomid][2];
+    if (xflag) {
+      x[i][0] = x0[iatom][0];
+      x[i][1] = x0[iatom][1];
+      x[i][2] = x0[iatom][2];
+    }
 
     v[i][0] = 0.0;
     v[i][1] = 0.0;
     v[i][2] = 0.0;
 
-    for (int j=0; j<modelorder; j++){
-      x[i][0] += phi[atomid][j] * rox[j];
-      x[i][1] += phi[atomid+nlocal][j] * rox[j];
-      x[i][2] += phi[atomid+nlocal*2][j] * rox[j];
+    for (j = 0; j < modelorder; j++){
 
-      v[i][0] += phi[atomid][j] * rov[j];
-      v[i][1] += phi[atomid+nlocal][j] * rov[j];
-      v[i][2] += phi[atomid+nlocal*2][j] * rov[j];
+      if (xflag) {
+        x[i][0] += phi[iatom][j]            * y[j];
+        x[i][1] += phi[iatom + nlocal][j]   * y[j];
+        x[i][2] += phi[iatom + nlocal*2][j] * y[j];  
+      }
+
+      v[i][0] += phi[iatom][j]              * y_dot[j];
+      v[i][1] += phi[iatom + nlocal][j]     * y_dot[j];
+      v[i][2] += phi[iatom + nlocal*2][j]   * y_dot[j];
     }
   }
 }

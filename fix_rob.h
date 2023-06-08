@@ -34,14 +34,16 @@ class FixROB : public Fix {
   void end_of_step() override;
   void post_run() override;
   Eigen::MatrixXd ConvertToEigenMatrix(double **, int, int);
+  Eigen::BDCSVD<Eigen::MatrixXd> compute_svd();
+  void write_phi(Eigen::BDCSVD<Eigen::MatrixXd>);
  
  protected:
    int modelorder;
    int nsnapshots;
    double **snapshots;
-   double **phi;
-   double **initial;
+   double **x0;
    std::string robfilename;
+   int fullorderflag;
 
 };
 
