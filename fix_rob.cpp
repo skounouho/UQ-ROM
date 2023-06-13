@@ -21,9 +21,10 @@
 
 // ****************** ADDED *********************
 
+#include "modify.h"
 #include "memory.h"
 #include "error.h"
-#include "read_dump.h"
+#include "fix_store_atom.h"
 #include <fstream>
 #include <Eigen/Core>
 #include <Eigen/SVD>
@@ -59,21 +60,7 @@ FixROB::FixROB(LAMMPS *lmp, int narg, char **arg) :
   // create arrays
 
   snapshots = nullptr;
-  x0 = nullptr;
-
   memory->create(snapshots, 1, nlocal * 3, "FixROB:snapshots");
-  memory->create(x0, nlocal, 3, "FixROB:x0");
-
-  double **xinit = atom->x;
-  int *tag = atom->tag;
-  int iatom;
-
-  for (int i = 0; i < nlocal; i++) {
-    iatom = tag[i] - 1;
-    x0[iatom][0] = xinit[i][0];
-    x0[iatom][1] = xinit[i][1];
-    x0[iatom][2] = xinit[i][2];
-  }
 
   // initialize snapshot count
 
@@ -91,6 +78,55 @@ int FixROB::setmask()
   return mask;
 }
 
+/* ----------------------------------------------------------------------
+   fix STORE adapted from fix ADAPT to keep initial atom positions
+------------------------------------------------------------------------- */
+
+void FixROB::post_constructor()
+{
+
+  // new id = fix-ID + FIX_STORE_ATTRIBUTE
+  // new fix group = group for this fix
+
+  id_fix_xinit = nullptr;
+
+  id_fix_xinit = utils::strdup(id + std::string("_FIX_STORE_XINIT"));
+  fix_xinit = dynamic_cast<FixStoreAtom *>(
+    modify->add_fix(fmt::format("{} all STORE/ATOM 3 0 0 0",id_fix_xinit)));
+  if (fix_xinit->restart_reset) fix_xinit->restart_reset = 0;
+  else {
+    double **arr = fix_xinit->astore;
+    double **x = atom->x;
+    int *mask = atom->mask;
+    int nlocal = atom->nlocal;
+
+    for (int i = 0; i < nlocal; i++) {
+      if (mask[i] & groupbit) {
+        arr[i][0] = x[i][0];
+        arr[i][1] = x[i][1];
+        arr[i][2] = x[i][2];
+      }
+      else {
+        arr[i][0] = 0;
+        arr[i][1] = 0;
+        arr[i][2] = 0;
+      }
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixROB::init()
+{
+  // fixes that store initial per-atom positions
+
+  if (id_fix_xinit) {
+    fix_xinit = dynamic_cast<FixStoreAtom *>(modify->get_fix_by_id(id_fix_xinit));
+    if (!fix_xinit) error->all(FLERR,"Could not find fix ROB storage fix ID {}", id_fix_xinit);
+  }
+}
+
 /* ---------------------------------------------------------------------- */
 
 void FixROB::end_of_step()
@@ -98,8 +134,14 @@ void FixROB::end_of_step()
 
   int iatom;
   double **x = atom->x;
+  double **x0 = fix_xinit->astore;
   int *tag = atom->tag;
   int nlocal = atom->nlocal;
+
+  if (update->ntimestep == 0) {
+    FixROB::post_constructor();
+    return;
+  }
 
   if (nsnapshots > 0) {
     memory->grow(snapshots, nsnapshots + 1, nlocal * 3, "FixROB:snapshots");
@@ -109,9 +151,9 @@ void FixROB::end_of_step()
 
   for (int i = 0; i < nlocal; i++) {
     iatom = tag[i] - 1;
-    snapshots[nsnapshots][iatom] = x[i][0] - x0[iatom][0];
-    snapshots[nsnapshots][iatom + nlocal] = x[i][1] - x0[iatom][1];
-    snapshots[nsnapshots][iatom + nlocal*2] = x[i][2] - x0[iatom][2];
+    snapshots[nsnapshots][iatom] = x[i][0] - x0[i][0];
+    snapshots[nsnapshots][iatom + nlocal] = x[i][1] - x0[i][1];
+    snapshots[nsnapshots][iatom + nlocal*2] = x[i][2] - x0[i][2];
   }
 
   nsnapshots++;
@@ -125,9 +167,23 @@ void FixROB::post_run()
   write_phi(svd);
 }
 
+/* ----------------------------------------------------------------------
+   initialize one atom's storage values, called when atom is created -
+   from fix ADAPT
+------------------------------------------------------------------------- */
+
+void FixROB::set_arrays(int i)
+{
+  if (fix_xinit) {
+    fix_xinit->astore[i][0] = atom->x[i][0];
+    fix_xinit->astore[i][1] = atom->x[i][1];
+    fix_xinit->astore[i][2] = atom->x[i][2];
+  }
+}
+
 /* ---------------------------------------------------------------------- */
 
-Eigen::MatrixXd FixROB::ConvertToEigenMatrix(double **data, int rows, int columns)
+Eigen::MatrixXd FixROB::convert_to_matrix(double **data, int rows, int columns)
 {
     Eigen::MatrixXd eMatrix(rows, columns);
     for (int i = 0; i < rows; ++i)
@@ -144,7 +200,7 @@ Eigen::BDCSVD<MatrixXd> FixROB::compute_svd()
 
   // convert data to Eigen matrix
 
-  MatrixXd snapshotmatrix = ConvertToEigenMatrix(snapshots, nsnapshots, nlocal * 3);
+  MatrixXd snapshotmatrix = convert_to_matrix(snapshots, nsnapshots, nlocal * 3);
 
   // tranpose and compute singular value decomposition
 
@@ -160,21 +216,26 @@ void FixROB::write_phi(Eigen::BDCSVD<Eigen::MatrixXd> svd) {
   int i,j;
   int nlocal = atom->nlocal;
 
-  // get u matrix of svd [X] = [U][S][V]'
+  // get U matrix of svd [X] = [U][S][V]'
 
   MatrixXd U = svd.matrixU();
-  if (fullorderflag) modelorder = nsnapshots;
-  else if (modelorder > nsnapshots) modelorder = nsnapshots; // cap rank at number of snapshots
 
   // get singular values
 
   VectorXd S = svd.singularValues();
-  utils::logmesg(lmp, "The rank is approximately {}\n", svd.nonzeroSingularValues());
+  int nsingularvals = svd.nonzeroSingularValues();
+  utils::logmesg(lmp, "The rank is approximately {}\n", nsingularvals);
+
+  // cap model order to number of singular values (rank)
+  
+  if (fullorderflag) modelorder = nsingularvals;
+  else if (modelorder > nsingularvals) modelorder = nsingularvals;
 
   // print result to file
 
   try {
     std::ofstream file(robfilename);
+    file << std::fixed;
     file << std::setprecision(16);
     if (file.is_open()) {
       for (i = 0; i < nlocal * 3; i++) {
