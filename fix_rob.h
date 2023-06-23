@@ -31,23 +31,20 @@ class FixROB : public Fix {
   FixROB(class LAMMPS *, int, char **);
 
   int setmask() override;
-  void post_constructor() override;
   void init() override;
   void end_of_step() override;
   void post_run() override;
-  void set_arrays(int) override;
   Eigen::MatrixXd convert_to_matrix(double **, int, int);
   Eigen::BDCSVD<Eigen::MatrixXd> compute_svd();
   void write_phi(Eigen::BDCSVD<Eigen::MatrixXd>);
- 
+
  private:
    int modelorder;
    int nsnapshots;
    double **snapshots;
+   double **x0;
    char *robfilename;
    int fullorderflag;
-   char *id_fix_xinit;
-   class FixStoreAtom *fix_xinit;
 };
 
 }    // namespace LAMMPS_NS

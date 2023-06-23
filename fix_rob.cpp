@@ -60,12 +60,13 @@ FixROB::FixROB(LAMMPS *lmp, int narg, char **arg) :
   // create arrays
 
   snapshots = nullptr;
+  x0 = nullptr;
   memory->create(snapshots, 1, nlocal * 3, "FixROB:snapshots");
+  memory->create(x0, nlocal, 3, "FixNVEROM:x0");
 
   // initialize snapshot count
 
   nsnapshots = 0;
-  
 }
 
 /* ---------------------------------------------------------------------- */
@@ -78,52 +79,22 @@ int FixROB::setmask()
   return mask;
 }
 
-/* ----------------------------------------------------------------------
-   fix STORE adapted from fix ADAPT to keep initial atom positions
-------------------------------------------------------------------------- */
-
-void FixROB::post_constructor()
-{
-
-  // new id = fix-ID + FIX_STORE_ATTRIBUTE
-  // new fix group = group for this fix
-
-  id_fix_xinit = nullptr;
-
-  id_fix_xinit = utils::strdup(id + std::string("_FIX_STORE_XINIT"));
-  fix_xinit = dynamic_cast<FixStoreAtom *>(
-    modify->add_fix(fmt::format("{} all STORE/ATOM 3 0 0 0",id_fix_xinit)));
-  if (fix_xinit->restart_reset) fix_xinit->restart_reset = 0;
-  else {
-    double **arr = fix_xinit->astore;
-    double **x = atom->x;
-    int *mask = atom->mask;
-    int nlocal = atom->nlocal;
-
-    for (int i = 0; i < nlocal; i++) {
-      if (mask[i] & groupbit) {
-        arr[i][0] = x[i][0];
-        arr[i][1] = x[i][1];
-        arr[i][2] = x[i][2];
-      }
-      else {
-        arr[i][0] = 0;
-        arr[i][1] = 0;
-        arr[i][2] = 0;
-      }
-    }
-  }
-}
-
 /* ---------------------------------------------------------------------- */
 
 void FixROB::init()
 {
-  // fixes that store initial per-atom positions
+  // save initial atom positions
+  
+  double **xinit = atom->x;
+  int *tag = atom->tag;
+  int nlocal = atom->nlocal;
+  int iatom;
 
-  if (id_fix_xinit) {
-    fix_xinit = dynamic_cast<FixStoreAtom *>(modify->get_fix_by_id(id_fix_xinit));
-    if (!fix_xinit) error->all(FLERR,"Could not find fix ROB storage fix ID {}", id_fix_xinit);
+  for (int i = 0; i < nlocal; i++) {
+    iatom = tag[i] - 1;
+    x0[iatom][0] = xinit[i][0];
+    x0[iatom][1] = xinit[i][1];
+    x0[iatom][2] = xinit[i][2];
   }
 }
 
@@ -134,12 +105,11 @@ void FixROB::end_of_step()
 
   int iatom;
   double **x = atom->x;
-  double **x0 = fix_xinit->astore;
   int *tag = atom->tag;
   int nlocal = atom->nlocal;
 
   if (update->ntimestep == 0) {
-    FixROB::post_constructor();
+    FixROB::init();
     return;
   }
 
@@ -151,9 +121,9 @@ void FixROB::end_of_step()
 
   for (int i = 0; i < nlocal; i++) {
     iatom = tag[i] - 1;
-    snapshots[nsnapshots][iatom] = x[i][0] - x0[i][0];
-    snapshots[nsnapshots][iatom + nlocal] = x[i][1] - x0[i][1];
-    snapshots[nsnapshots][iatom + nlocal*2] = x[i][2] - x0[i][2];
+    snapshots[nsnapshots][iatom] = x[i][0] - x0[iatom][0];
+    snapshots[nsnapshots][iatom + nlocal] = x[i][1] - x0[iatom][1];
+    snapshots[nsnapshots][iatom + nlocal*2] = x[i][2] - x0[iatom][2];
   }
 
   nsnapshots++;
@@ -163,22 +133,12 @@ void FixROB::end_of_step()
 
 void FixROB::post_run()
 {
+  if (nsnapshots <= 0) {
+    error->warning(FLERR,"Did not collect any snapshots, unable to compute reduced order basis");
+    return;
+  }
   BDCSVD<MatrixXd> svd = compute_svd();
   write_phi(svd);
-}
-
-/* ----------------------------------------------------------------------
-   initialize one atom's storage values, called when atom is created -
-   from fix ADAPT
-------------------------------------------------------------------------- */
-
-void FixROB::set_arrays(int i)
-{
-  if (fix_xinit) {
-    fix_xinit->astore[i][0] = atom->x[i][0];
-    fix_xinit->astore[i][1] = atom->x[i][1];
-    fix_xinit->astore[i][2] = atom->x[i][2];
-  }
 }
 
 /* ---------------------------------------------------------------------- */
