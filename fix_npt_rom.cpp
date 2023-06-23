@@ -23,7 +23,7 @@ using namespace FixConst;
 
 FixNPTROM::FixNPTROM(LAMMPS *lmp, int narg, char **arg) : FixNHROM(lmp, narg, arg)
 {
-  if (!tstat_flag) error->all(FLERR, "Temperature control must be used with fix nvt/rom");
+  if (!tstat_flag) error->all(FLERR, "Temperature control must be used with fix npt/rom");
   if (!pstat_flag) error->all(FLERR, "Pressure control must be used with fix npt/rom");
 
   // create a new compute temp style

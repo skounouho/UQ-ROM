@@ -32,7 +32,7 @@ class FixNHROM : public FixNH {
  protected:
   double inertia;
 
-  void nve_v() override;
+//   void nve_v() override;
   void nve_x() override;
 
   //******************* ADDED ******************

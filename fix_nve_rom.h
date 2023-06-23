@@ -28,24 +28,21 @@ class FixNVEROM : public FixNVE {
  public:
   FixNVEROM(class LAMMPS *, int, char **);
 
-  int modelorder;
-  double **phi;
+  void initial_integrate(int) override;
+  void final_integrate() override;
+  double compute_vector(int) override;
+
+ protected:
+  int modelorder;      // order of reduced order model
+  double **phi;        // reduced-order basis
   double **x0;         // initial position of particles
   double *y;           // reduced order position
   double *y_dot;       // reduced order velocity
-  double *y_dot_dot;   // reduced order acceleration 
-
-  void initial_integrate(int) override;
-  void final_integrate() override;
-
-  //******************* ADDED ******************
-
-  // helper methods
+  double *y_dot_dot;   // reduced order acceleration
 
   void read_rob(std::string, double**);
   void compute_reduced_variables(int);
   void update_physical_variables(int);
-
 };
 
 }    // namespace LAMMPS_NS
