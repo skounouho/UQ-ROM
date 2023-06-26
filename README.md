@@ -4,7 +4,7 @@ This collection of fixes allow for the creation of reduced order models in LAMMP
 
 ## Installation
 
-Download the files and insert them in the `src` folder in your LAMMPS installation. You will need to install [Eigen](https://eigen.tuxfamily.org) to use `fix rob`. See the [LAMMPS documentation](https://eigen.tuxfamily.org) for how to compile LAMMPS with Eigen.
+Download the files in `src` and insert them in the `src` folder in your LAMMPS installation. You will need to install [Eigen](https://eigen.tuxfamily.org) to use `fix rob`. See the [LAMMPS documentation](https://eigen.tuxfamily.org) for how to compile LAMMPS with Eigen.
 
 ## Usage
 
@@ -33,6 +33,8 @@ values = order robfile
 ```
 
 The `rom` fixes run a reduced-order simulation in the chosen ensemble. The code reads the reduced-order basis, converts between physical and reduced quantities and calculate time integration in the reduced-order space. The reduced model *should* be compatible with running on multiple processors using MPI.
+
+NOTE: To use the `rom` command with the NVT, NPT or NPH ensembles, make sure to replace the `fix_nh_rom.cpp` file in the LAMMPS `src` directory. The file includes a few lines of code for parsing the keyword 'model'.
 
 ### fix rob command
 
