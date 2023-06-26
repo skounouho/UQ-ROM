@@ -8,7 +8,7 @@ Download the files in `src` and insert them in the `src` folder in your LAMMPS i
 
 ## Background
 
-The goal of proper orthogonal decomposition is to take a complex system of seemingly random vectors and extract some kind of order from the chaos. This is done by modeling the velocity vector as a function of a spatially-dependent function and a time-dependent coefficient.
+The goal of proper orthogonal decomposition is to take a complex system of seemingly random vectors and extract some kind of order from the chaos. This is done by modeling the trajectory of each particle as a function of a spatially-dependent function and a time-dependent coefficient.
 
 $$
 \pmb{q}(\pmb{x},t) = \sum^{\infty}_{k=1} \pmb{\Phi}_k(\pmb{x}) a_k(t)
