@@ -16,10 +16,10 @@ $$
 
 The reduced order model works by taking $N_s$ atom displacement snapshots of a full atomistic simulation and performing POD using singular value decomposition. The first matrix $[\Phi]$ in the resulting decomposition can be used as a linear approximation of the spatially-dependent functions, while the time-dependent coefficients become the reduced variable $\pmb{y}$.
 
-Using a Galerkin projection, we can create a reduced order system with the following equations of motion:
+We can create a reduced order system by projection from the physical space $\pmb{q}$ to the reduced space.
 
 $$
-[\Phi]^T [M] [\Phi]^T \pmb{\ddot{y}}(t) = [\Phi]^T f([\Phi] \pmb{y}(t) + \pmb{q}(0))
+\pmb{y}(t) = [\Phi]^T (\pmb{q}(t) - \pmb{q}(0))
 $$
 
 For a longer primer on the POD method, see [Weiss 2019](https://doi.org/10.2514/6.2019-3333). For a full mathematical proof of the method, see [Gubisch and Volkwein 2017](https://doi.org/10.1137/1.9781611974829.ch1).
