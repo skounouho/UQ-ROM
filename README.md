@@ -19,7 +19,7 @@ The reduced order model works by taking $N_s$ atom displacement snapshots of a f
 Using a Galerkin projection, we can create a reduced order system with the following equations of motion:
 
 $$
-[\Phi]^T [M] [\Phi]^T \ddot{\pmb{y}}(t) = [\Phi]^T f([\Phi] \pmb{y}(t) + \pmb{q}(0))
+[\Phi]^T [M] [\Phi]^T \pmb{\ddot{y}}(t) = [\Phi]^T f([\Phi] \pmb{y}(t) + \pmb{q}(0))
 $$
 
 For a longer primer on the POD method, see [Weiss 2019](https://doi.org/10.2514/6.2019-3333). For a full mathematical proof of the method, see [Gubisch and Volkwein 2017](https://doi.org/10.1137/1.9781611974829.ch1).
