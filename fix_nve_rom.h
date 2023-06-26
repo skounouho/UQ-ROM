@@ -33,12 +33,16 @@ class FixNVEROM : public FixNVE {
   double compute_vector(int) override;
 
  protected:
+  int me, nprocs;
   int modelorder;      // order of reduced order model
   double **phi;        // reduced-order basis
   double **x0;         // initial position of particles
   double *y;           // reduced order position
   double *y_dot;       // reduced order velocity
   double *y_dot_dot;   // reduced order acceleration
+
+  // implementing MPI run capability
+  double *y_all, *y_dot_all;
 
   void read_rob(std::string, double**);
   void compute_reduced_variables(int);

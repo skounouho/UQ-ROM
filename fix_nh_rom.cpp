@@ -44,6 +44,11 @@ FixNHROM::FixNHROM(LAMMPS *lmp, int narg, char **arg) :
       time_integrate = 1;
 
       modelorder = utils::inumeric(FLERR,arg[iarg + 1],false,lmp);
+      
+      // set up MPI
+
+      MPI_Comm_rank(world,&me);
+      MPI_Comm_size(world,&nprocs);
 
       // create arrays
 
@@ -55,11 +60,15 @@ FixNHROM::FixNHROM(LAMMPS *lmp, int narg, char **arg) :
       y_dot_dot = nullptr;  
       x0 = nullptr;
 
-      memory->create(phi, nlocal * 3, modelorder, "FixNVEROM:phi");
-      memory->create(y, modelorder, "FixNVEROM:y");
-      memory->create(y_dot, modelorder, "FixNVEROM:y_dot");
-      memory->create(y_dot_dot, modelorder, "FixNVEROM:y_dot_dot");
-      memory->create(x0, nlocal, 3, "FixNVEROM:x0");
+      memory->create(phi, nlocal * 3, modelorder, "FixNHROM:phi");
+      memory->create(y, modelorder, "FixNHROM:y");
+      memory->create(y_dot, modelorder, "FixNHROM:y_dot");
+      memory->create(y_dot_dot, modelorder, "FixNHROM:y_dot_dot");
+      memory->create(x0, nlocal, 3, "FixNHROM:x0");
+
+      // MPI variables
+      memory->create(y_all, modelorder, "FixNHROM:y_all");
+      memory->create(y_dot_all, modelorder, "FixNHROM:y_dot_all");
 
       // save initial atom positions
 
@@ -76,6 +85,10 @@ FixNHROM::FixNHROM(LAMMPS *lmp, int narg, char **arg) :
       
       read_rob(arg[iarg + 2], phi);
 
+      if (phi[nlocal * 3 - 1][modelorder - 1] != phi[nlocal * 3 - 1][modelorder - 1]) {
+        error->all(FLERR, "Reduced order basis is not filled");
+      }
+
       iarg += 3;
     } else iarg++;
   }
@@ -85,20 +98,23 @@ FixNHROM::FixNHROM(LAMMPS *lmp, int narg, char **arg) :
    perform half-step update of velocities in ROM
 -----------------------------------------------------------------------*/
 
-// void FixNHROM::nve_v()
-// {
-//   int xflag = 1;
+void FixNHROM::nve_v()
+{
+  int xflag = 1;
 
-//   compute_reduced_variables(xflag);
+  compute_reduced_variables(xflag);
 
-//   // This section is heavily edited. Most atom group tests have been moved to the convert functions
+  // This section is heavily edited. Most atom group tests have been moved to the convert functions
 
-//   for (int i = 0; i < modelorder; i++) {
-//     y_dot[i] += dtf * y_dot_dot[i]; // changed from dtfm
-//   }
+  for (int i = 0; i < modelorder; i++) {
+    y_dot[i] += dtf * y_dot_dot[i]; // changed from dtfm
+  }
 
-//   update_physical_variables(xflag);
-// }
+  MPI_Allreduce(y_dot, y_dot_all, modelorder, MPI_DOUBLE, MPI_SUM, world);
+  y_dot = y_dot_all;
+
+  update_physical_variables(xflag);
+}
 
 /* ----------------------------------------------------------------------
    perform full-step update of position with ROM
@@ -115,6 +131,9 @@ void FixNHROM::nve_x()
   for (int i = 0; i < modelorder; i++) { // dimension is modelorder
     y[i] += dtv * y_dot[i];
   }
+
+  MPI_Allreduce(y, y_all, modelorder, MPI_DOUBLE, MPI_SUM, world);
+  y = y_all;
 
   update_physical_variables(xflag);
 }
@@ -236,9 +255,9 @@ void FixNHROM::update_physical_variables(int xflag)
         x[i][2] = x0[iatom][2];
       }
 
-      // v[i][0] = 0.0;
-      // v[i][1] = 0.0;
-      // v[i][2] = 0.0;
+      v[i][0] = 0.0;
+      v[i][1] = 0.0;
+      v[i][2] = 0.0;
 
       for (j = 0; j < modelorder; j++){
 
@@ -248,9 +267,9 @@ void FixNHROM::update_physical_variables(int xflag)
           x[i][2] += phi[iatom + nlocal*2][j] * y[j];  
         }
 
-        // v[i][0] += phi[iatom][j]              * y_dot[j];
-        // v[i][1] += phi[iatom + nlocal][j]     * y_dot[j];
-        // v[i][2] += phi[iatom + nlocal*2][j]   * y_dot[j];
+        v[i][0] += phi[iatom][j]              * y_dot[j];
+        v[i][1] += phi[iatom + nlocal][j]     * y_dot[j];
+        v[i][2] += phi[iatom + nlocal*2][j]   * y_dot[j];
       }
     }
 }

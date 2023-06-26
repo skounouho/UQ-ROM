@@ -22,6 +22,8 @@ class FixNHROM : public FixNH {
  public:
   FixNHROM(class LAMMPS *, int, char **);
 
+ protected:
+  int me, nprocs;
   int modelorder;
   double **phi;
   double **x0;         // initial position of particles
@@ -29,13 +31,13 @@ class FixNHROM : public FixNH {
   double *y_dot;       // reduced order velocity
   double *y_dot_dot;   // reduced order acceleration 
 
- protected:
+  // implementing MPI run capability
+  double *y_all, *y_dot_all;
+  
   double inertia;
 
-//   void nve_v() override;
+  void nve_v() override;
   void nve_x() override;
-
-  //******************* ADDED ******************
 
   // helper methods
   

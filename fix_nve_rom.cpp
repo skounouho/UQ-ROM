@@ -15,6 +15,7 @@
 #include "fix_nve_rom.h"
 
 #include "atom.h"
+#include "comm.h"
 #include "domain.h"
 #include "error.h"
 #include "force.h"
@@ -43,6 +44,11 @@ FixNVEROM::FixNVEROM(LAMMPS *lmp, int narg, char **arg) :
 
   modelorder = utils::inumeric(FLERR,arg[3],false,lmp);
 
+  // set up MPI
+
+  MPI_Comm_rank(world,&me);
+  MPI_Comm_size(world,&nprocs);
+
   // create arrays
 
   int nlocal = atom->nlocal;
@@ -59,6 +65,11 @@ FixNVEROM::FixNVEROM(LAMMPS *lmp, int narg, char **arg) :
   memory->create(y_dot_dot, modelorder, "FixNVEROM:y_dot_dot");
   memory->create(x0, nlocal, 3, "FixNVEROM:x0");
 
+  // MPI variables
+  memory->create(y_all, modelorder, "FixNVEROM:y_all");
+  memory->create(y_dot_all, modelorder, "FixNVEROM:y_dot_all");
+
+  // compute variable
   size_vector = modelorder;
 
   // save initial atom positions
@@ -75,6 +86,11 @@ FixNVEROM::FixNVEROM(LAMMPS *lmp, int narg, char **arg) :
   }
   
   read_rob(arg[4], phi);
+
+  // check if phi matrix is filled and not NaN
+  if (phi[nlocal * 3 - 1][modelorder - 1] != phi[nlocal * 3 - 1][modelorder - 1]) {
+    error->all(FLERR, "Reduced order basis is not filled");
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -94,6 +110,11 @@ void FixNVEROM::initial_integrate(int /*vflag*/)
     y[i] += dtv * y_dot[i];
   }
 
+  MPI_Allreduce(y, y_all, modelorder, MPI_DOUBLE, MPI_SUM, world);
+  MPI_Allreduce(y_dot, y_dot_all, modelorder, MPI_DOUBLE, MPI_SUM, world);
+  y = y_all;
+  y_dot = y_dot_all;
+
   update_physical_variables(xflag);
 }
 
@@ -110,6 +131,9 @@ void FixNVEROM::final_integrate()
   for (int i = 0; i < modelorder; i++) {// dimension is modelorder
     y_dot[i] += dtf * y_dot_dot[i]; // changed from dtfm
   }
+
+  MPI_Allreduce(y_dot, y_dot_all, modelorder, MPI_DOUBLE, MPI_SUM, world);
+  y_dot = y_dot_all;
 
   update_physical_variables(xflag);
 
@@ -232,12 +256,6 @@ void FixNVEROM::update_physical_variables(int xflag)
   int nlocal = atom->nlocal;
   if (igroup == atom->firstgroup) nlocal = atom->nfirst;
 
-  double *y_all, *y_dot_all;
-  y_all = y;
-  y_dot_all = y_dot;
-  // if (xflag) MPI_Allreduce(&y, &y_all, modelorder, MPI_DOUBLE, MPI_SUM, world);
-  // MPI_Allreduce(&y_dot, &y_dot_all, modelorder, MPI_DOUBLE, MPI_SUM, world);
-
   for (i = 0; i < nlocal; i++)
     if (mask[i] & groupbit) {
       iatom = tag[i] - 1;
@@ -255,14 +273,14 @@ void FixNVEROM::update_physical_variables(int xflag)
       for (j = 0; j < modelorder; j++){
 
         if (xflag) {
-          x[i][0] += phi[iatom][j]            * y_all[j];
-          x[i][1] += phi[iatom + nlocal][j]   * y_all[j];
-          x[i][2] += phi[iatom + nlocal*2][j] * y_all[j];  
+          x[i][0] += phi[iatom][j]            * y[j];
+          x[i][1] += phi[iatom + nlocal][j]   * y[j];
+          x[i][2] += phi[iatom + nlocal*2][j] * y[j];  
         }
 
-        v[i][0] += phi[iatom][j]              * y_dot_all[j];
-        v[i][1] += phi[iatom + nlocal][j]     * y_dot_all[j];
-        v[i][2] += phi[iatom + nlocal*2][j]   * y_dot_all[j];
+        v[i][0] += phi[iatom][j]              * y_dot[j];
+        v[i][1] += phi[iatom + nlocal][j]     * y_dot[j];
+        v[i][2] += phi[iatom + nlocal*2][j]   * y_dot[j];
       }
     }
 }
