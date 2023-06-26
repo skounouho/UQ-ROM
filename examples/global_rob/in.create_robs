@@ -1,0 +1,37 @@
+# EXAMPLE generate rob from multiple dump files
+#graphene model based on paramters in IJNME paper by JS Chen-2013:96:599-627
+
+# ------------------- make directory rob ------------------ #
+
+shell [ -d rob ] || mkdir -p rob
+
+# -------------------- initalize atoms -------------------- #
+
+units metal
+
+read_data       ../data.graphene_272C
+pair_style	rebo
+pair_coeff	* * ../CH.rebo C
+
+# ----------------- setup loop variables ------------------ #
+
+variable N equal 200
+variable order equal 5
+variable potential index airebo bop lcbop rebo tersoff
+
+# ------------------- create global rob ------------------- #
+
+fix global all rob ${N} ${order} rob/rob.global
+
+# ------------------------- loop -------------------------- #
+
+label loop
+
+print "Running ${potential}"
+
+fix ${potential} all rob ${N} ${order} rob/rob.${potential}
+rerun dump/dump.${potential} dump x y z
+unfix ${potential}
+
+next potential
+jump in.create_robs loop
