@@ -84,6 +84,11 @@ FixNVEROM::FixNVEROM(LAMMPS *lmp, int narg, char **arg) :
     x0[iatom][1] = xinit[i][1];
     x0[iatom][2] = xinit[i][2];
   }
+
+  // check if rob file is available and readable
+
+  if (!platform::file_is_readable(arg[4]))
+    error->all(FLERR, fmt::format("Cannot open file {}: {}", arg[4], utils::getsyserror()));
   
   read_rob(arg[4], phi);
 

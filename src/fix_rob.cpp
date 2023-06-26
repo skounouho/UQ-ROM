@@ -67,6 +67,19 @@ FixROB::FixROB(LAMMPS *lmp, int narg, char **arg) :
   // initialize snapshot count
 
   nsnapshots = 0;
+
+  // save initial atom positions
+  
+  double **xinit = atom->x;
+  int *tag = atom->tag;
+  int iatom;
+
+  for (int i = 0; i < nlocal; i++) {
+    iatom = tag[i] - 1;
+    x0[iatom][0] = xinit[i][0];
+    x0[iatom][1] = xinit[i][1];
+    x0[iatom][2] = xinit[i][2];
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -85,17 +98,17 @@ void FixROB::init()
 {
   // save initial atom positions
   
-  double **xinit = atom->x;
-  int *tag = atom->tag;
-  int nlocal = atom->nlocal;
-  int iatom;
+  // double **xinit = atom->x;
+  // int *tag = atom->tag;
+  // int nlocal = atom->nlocal;
+  // int iatom;
 
-  for (int i = 0; i < nlocal; i++) {
-    iatom = tag[i] - 1;
-    x0[iatom][0] = xinit[i][0];
-    x0[iatom][1] = xinit[i][1];
-    x0[iatom][2] = xinit[i][2];
-  }
+  // for (int i = 0; i < nlocal; i++) {
+  //   iatom = tag[i] - 1;
+  //   x0[iatom][0] = xinit[i][0];
+  //   x0[iatom][1] = xinit[i][1];
+  //   x0[iatom][2] = xinit[i][2];
+  // }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -109,7 +122,13 @@ void FixROB::end_of_step()
   int nlocal = atom->nlocal;
 
   if (update->ntimestep == 0) {
-    FixROB::init();
+    // save initial atom positions
+    for (int i = 0; i < nlocal; i++) {
+      iatom = tag[i] - 1;
+      x0[iatom][0] = x[i][0];
+      x0[iatom][1] = x[i][1];
+      x0[iatom][2] = x[i][2];
+    }
     return;
   }
 

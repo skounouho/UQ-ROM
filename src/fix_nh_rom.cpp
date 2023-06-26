@@ -83,6 +83,11 @@ FixNHROM::FixNHROM(LAMMPS *lmp, int narg, char **arg) :
         x0[iatom][2] = xinit[i][2];
       }
       
+      // check if rob file is available and readable
+
+      if (!platform::file_is_readable(arg[iarg + 2]))
+        error->all(FLERR, fmt::format("Cannot open file {}: {}", arg[iarg + 2], utils::getsyserror()));
+
       read_rob(arg[iarg + 2], phi);
 
       if (phi[nlocal * 3 - 1][modelorder - 1] != phi[nlocal * 3 - 1][modelorder - 1]) {
