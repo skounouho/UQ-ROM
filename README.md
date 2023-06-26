@@ -1,10 +1,28 @@
 # Reduced-Order Modeling for LAMMPS Using Proper Orthogonal Decomposition
 
-This collection of fixes allow for the creation of reduced order models in LAMMPS using POD linear subspace methods. For a primer on the POD method, see [Weiss 2019](https://doi.org/10.2514/6.2019-3333).
+This collection of fixes allow for the creation of reduced order models in LAMMPS using POD linear subspace methods.
 
 ## Installation
 
 Download the files in `src` and insert them in the `src` folder in your LAMMPS installation. You will need to install [Eigen](https://eigen.tuxfamily.org) to use `fix rob`. See the [LAMMPS documentation](https://eigen.tuxfamily.org) for how to compile LAMMPS with Eigen.
+
+## Background
+
+The goal of proper orthogonal decomposition is to take a complex system of seemingly random vectors and extract some kind of order from the chaos. This is done by modeling the velocity vector as a function of a spatially-dependent function and a time-dependent coefficient.
+
+$$
+\pmb{u}'(\pmb{x},t) = \sum^{\infty}_{k=1} \pmb{\Phi}_k(\pmb{x}) a_k(t)
+$$
+
+The reduced order model works by taking $N_s$ atom displacement snapshots of a full atomistic simulation and performing POD using singular value decomposition. The first matrix $[\Phi]$ in the resulting decomposition can be used as a linear approximation of the spatially-dependent functions, while the time-dependent coefficients become the reduced variable $\pmb{y}$.
+
+Using a Galerkin projection, we can create a reduced order system with the following equations of motion:
+
+$$
+[\Phi]^T [M] [\Phi]^T \ddot{\pmb{y}}(t) = [\Phi]^T f([\Phi] \pmb{y}(t) + \pmb{q}(0))
+$$
+
+For a longer primer on the POD method, see [Weiss 2019](https://doi.org/10.2514/6.2019-3333). For a full mathematical proof of the method, see [Gubisch and Volkwein 2017](https://doi.org/10.1137/1.9781611974829.ch1).
 
 ## Usage
 
@@ -28,7 +46,8 @@ fix ID group-ID style_name keyword value ...
 ```
 keyword = model
 values = order robfile
-  order = model order, which corresponds to the number of columns to be read from the reduced-order basis
+  order = model order, which corresponds to the number of columns to be read from the
+      reduced-order basis
   robfile = filepath to the input file containing the reduced-order basis
 ```
 
