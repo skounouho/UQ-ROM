@@ -11,7 +11,7 @@ Download the files in `src` and insert them in the `src` folder in your LAMMPS i
 The goal of proper orthogonal decomposition is to take a complex system of seemingly random vectors and extract some kind of order from the chaos. This is done by modeling the velocity vector as a function of a spatially-dependent function and a time-dependent coefficient.
 
 $$
-\pmb{u}'(\pmb{x},t) = \sum^{\infty}_{k=1} \pmb{\Phi}_k(\pmb{x}) a_k(t)
+\pmb{q}(\pmb{x},t) = \sum^{\infty}_{k=1} \pmb{\Phi}_k(\pmb{x}) a_k(t)
 $$
 
 The reduced order model works by taking $N_s$ atom displacement snapshots of a full atomistic simulation and performing POD using singular value decomposition. The first matrix $[\Phi]$ in the resulting decomposition can be used as a linear approximation of the spatially-dependent functions, while the time-dependent coefficients become the reduced variable $\pmb{y}$.
