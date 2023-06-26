@@ -13,22 +13,22 @@
 
 #ifdef FIX_CLASS
 // clang-format off
-FixStyle(rob,FixROB);
+FixStyle(rob/sample,FixROBSample);
 // clang-format on
 #else
 
-#ifndef LMP_FIX_ROB_H
-#define LMP_FIX_ROB_H
+#ifndef LMP_FIX_ROB_SAMPLE_H
+#define LMP_FIX_ROB_SAMPLE_H
 
-#include "fix.h"
+#include "fix_rob.h"
 #include <Eigen/Core>
 #include <Eigen/SVD>
 
 namespace LAMMPS_NS {
 
-class FixROB : public Fix {
+class FixROBSample : public FixROB {
  public:
-  FixROB(class LAMMPS *, int, char **);
+  FixROBSample(class LAMMPS *, int, char **);
 
   virtual int setmask() override;
   virtual void end_of_step() override;

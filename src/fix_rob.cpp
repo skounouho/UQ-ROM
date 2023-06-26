@@ -15,26 +15,17 @@
 #include "fix_rob.h"
 
 #include "atom.h"
+#include "error.h"
 #include "force.h"
-#include "respa.h"
-#include "update.h"
-
-// ****************** ADDED *********************
-
 #include "modify.h"
 #include "memory.h"
-#include "error.h"
-#include "fix_store_atom.h"
+#include "respa.h"
+#include "update.h"
 #include <fstream>
 #include <Eigen/Core>
 #include <Eigen/SVD>
 
-#include "iostream" // for debugging
-
 using namespace Eigen;
-
-// *************** END ADDED *******************
-
 using namespace LAMMPS_NS;
 using namespace FixConst;
 
@@ -90,25 +81,6 @@ int FixROB::setmask()
   mask |= END_OF_STEP;
   mask |= POST_RUN;
   return mask;
-}
-
-/* ---------------------------------------------------------------------- */
-
-void FixROB::init()
-{
-  // save initial atom positions
-  
-  // double **xinit = atom->x;
-  // int *tag = atom->tag;
-  // int nlocal = atom->nlocal;
-  // int iatom;
-
-  // for (int i = 0; i < nlocal; i++) {
-  //   iatom = tag[i] - 1;
-  //   x0[iatom][0] = xinit[i][0];
-  //   x0[iatom][1] = xinit[i][1];
-  //   x0[iatom][2] = xinit[i][2];
-  // }
 }
 
 /* ---------------------------------------------------------------------- */
