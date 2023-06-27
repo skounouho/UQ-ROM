@@ -80,7 +80,7 @@ fix ID group-ID rob/stiefel Nsamples order file1 file2 ... fileM sampleformat ke
 * order = model order, which corresponds to the number of columns to be written from the reduced-order basis
 * file1, file2, ... fileM = ROB files to read, with the last file being the global basis
 * sampleformat = format string for generate ROB sample files
-* * one keyword may be appended
+* one keyword may be appended
 ```
 keyword = seed
   value = integer seed for the random number generator
