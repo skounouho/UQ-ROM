@@ -70,7 +70,7 @@ The `rob` fix generates a reduced order basis using the POD method. The code ass
 
 This command can be used with the LAMMPS [rerun](https://docs.lammps.org/rerun.html) command, as long as the timestep is set to a multiple of the timesteps in the dump files. **To decrease the memory usage during the initial run of the full-simulation, generating the reduced-order basis from a rerun is recommended.** Generating from a rerun also allows the user to create an basis for a simulation run on multiple processors.
 
-## fix rob/stiefel command
+### fix rob/stiefel command
 
 ```
 fix ID group-ID rob/stiefel Nsamples order file1 file2 ... fileM sampleformat keyword value
@@ -87,3 +87,10 @@ keyword = seed
 ```
 
 The `rob/stiefel` command generates ROB samples based on a few input ROB files. The code projects the bases onto the tangent space of the Stiefel manifold, and randomly samples from the tangent space. The samples are then retracted back to the Stiefel manifold and printed to ROB files. The method is outlined in [Zhang and Guilleminot 2023](https://doi.org/10.1016/j.cma.2022.115702).
+
+## References
+
+Zhang H., Guilleminot J., A Riemannian stochastic representation for quantifying model uncertainties in molecular dynamics simulations, Comput. Methods Appl. Mech. Engrg., 403 (2023), Article 115702, [10.1016/j.cma.2022.115702](https://doi.org/10.1016/j.cma.2022.115702)
+
+Thompson A.P., Aktulga H.M., Berger R., Bolintineanu D.S., Brown W.M., Crozier P.S., in’t Veld P.J., Kohlmeyer A., Moore S.G., Nguyen T.D., Shan R., Stevens M.J., Tranchida J., Trott C., Plimpton S.J. LAMMPS - a flexible simulation tool for particle-based materials modeling at the atomic, meso, and continuum scales
+Comput. Phys. Comm., 271 (2022), Article 108171, [10.1016/j.cpc.2021.108171](https://doi.org/10.1016/j.cpc.2021.108171)
