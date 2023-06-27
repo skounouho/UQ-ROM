@@ -1,10 +1,10 @@
-# Reduced-Order Modeling for LAMMPS Using Proper Orthogonal Decomposition
+# Reduced-Order Modeling and Uncertainty Quantification for LAMMPS Using Proper Orthogonal Decomposition
 
 This collection of fixes allow for the creation of reduced order models in LAMMPS using POD linear subspace methods.
 
 ## Installation
 
-Download the files in `src` and insert them in the `src` folder in your LAMMPS installation. You will need to install [Eigen](https://eigen.tuxfamily.org) to use `fix rob`. See the [LAMMPS documentation](https://eigen.tuxfamily.org) for how to compile LAMMPS with Eigen.
+Download the files in `src` and insert them in the `src` folder in your LAMMPS installation. You will need to install [Eigen](https://eigen.tuxfamily.org) to use `fix rob`. See the [LAMMPS documentation](https://eigen.tuxfamily.org) for how to compile LAMMPS with Eigen. You may need to add `unsupported/Eigen` to your PATH variable, or symlink it to the `src` directory in LAMMPS.
 
 ## Background
 
@@ -73,12 +73,17 @@ This command can be used with the LAMMPS [rerun](https://docs.lammps.org/rerun.h
 ## fix rob/stiefel command
 
 ```
-fix ID group-ID rob/stiefel Nsamples order file1 file2 ... fileM sampleformat
+fix ID group-ID rob/stiefel Nsamples order file1 file2 ... fileM sampleformat keyword value
 ```
 * ID, group-ID are documented in [fix](https://docs.lammps.org/fix.html) command
 * Nsamples = number of samples to generate
 * order = model order, which corresponds to the number of columns to be written from the reduced-order basis
 * file1, file2, ... fileM = ROB files to read, with the last file being the global basis
 * sampleformat = format string for generate ROB sample files
+* * one keyword may be appended
+```
+keyword = seed
+  value = integer seed for the random number generator
+```
 
 The `rob/stiefel` command generates ROB samples based on a few input ROB files. The code projects the bases onto the tangent space of the Stiefel manifold, and randomly samples from the tangent space. The samples are then retracted back to the Stiefel manifold and printed to ROB files. The method is outlined in [Zhang and Guilleminot 2023](https://doi.org/10.1016/j.cma.2022.115702).
