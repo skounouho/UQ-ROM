@@ -30,9 +30,9 @@ class FixROB : public Fix {
  public:
   FixROB(class LAMMPS *, int, char **);
 
-  virtual int setmask() override;
-  virtual void end_of_step() override;
-  virtual void post_run() override;
+  int setmask() override;
+  void end_of_step() override;
+  void post_run() override;
   Eigen::MatrixXd convert_to_matrix(double **, int, int);
   Eigen::BDCSVD<Eigen::MatrixXd> compute_svd();
   void write_phi(Eigen::BDCSVD<Eigen::MatrixXd>);
