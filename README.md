@@ -81,4 +81,4 @@ fix ID group-ID rob/stiefel Nsamples order file1 file2 ... fileM sampleformat
 * file1, file2, ... fileM = ROB files to read, with the last file being the global basis
 * sampleformat = format string for generate ROB sample files
 
-The `rob/stiefel` command generates ROB samples based on a few input ROB files. The method is outlined in [Zhang and Guilleminot 2023](https://doi.org/10.1016/j.cma.2022.115702).
+The `rob/stiefel` command generates ROB samples based on a few input ROB files. The code projects the bases onto the tangent space of the Stiefel manifold, and randomly samples from the tangent space. The samples are then retracted back to the Stiefel manifold and printed to ROB files. The method is outlined in [Zhang and Guilleminot 2023](https://doi.org/10.1016/j.cma.2022.115702).
