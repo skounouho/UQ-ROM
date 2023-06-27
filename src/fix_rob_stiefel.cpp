@@ -38,9 +38,6 @@ using namespace Eigen;
 using namespace LAMMPS_NS;
 using namespace FixConst;
 
-// fix id group rob/stiefel nsamples modelorder file1 file2 file3 sampleformat
-// fix 1 all rob/stiefel 20 25 phi_lj.txt phi_lj2.txt phi_lj3.txt phi_global.txt sample/phi_sample{}.txt
-
 /* ---------------------------------------------------------------------- */
 
 FixROBStiefel::FixROBStiefel(LAMMPS *lmp, int narg, char **arg) :
@@ -49,17 +46,29 @@ FixROBStiefel::FixROBStiefel(LAMMPS *lmp, int narg, char **arg) :
   if (narg < 7) utils::missing_cmd_args(FLERR, "fix rob/stiefel", error);
 
   nlocal = atom->nlocal;
+  rseed = 0;
 
   nsamples = utils::inumeric(FLERR,arg[3],false,lmp);
   if (nsamples <= 0) error->all(FLERR,"Illegal fix rob/stiefel nsamples value: {}", nsamples);
   modelorder = utils::inumeric(FLERR,arg[4],false,lmp);
   if (modelorder <= 0) error->all(FLERR,"Illegal fix rob/stiefel modelorder value: {}", modelorder);
+
+  int iarg = 5;
+
+  while (iarg < narg) {
+    if (strcmp(arg[iarg], "seed") == 0) {
+      rseed = utils::inumeric(FLERR, arg[iarg + 1], false, lmp);
+      utils::logmesg(lmp, "Random seed set to {}\n", rseed);
+      break;
+    }
+    iarg++;
+  }
   
-  store_files(narg - 6, &arg[5]);
+  store_files(iarg - 6, &arg[5]);
   if (nfile < 2) error->all(FLERR,"No global reduced order basis file specified for fix rob/stiefel");
   nmodels = nfile - 1;
 
-  sampleformat = utils::strdup(arg[narg - 1]);
+  sampleformat = utils::strdup(arg[iarg - 1]);
 
   // generate and print samples
 
@@ -312,6 +321,7 @@ inline void FixROBStiefel::generate_samples(Eigen::MatrixXd *rob, Eigen::MatrixX
 {
   int i, isample;
 
+  utils::logmesg(lmp, "Projecting samples to tangent space\n");
   // project onto the tangential space
   // assume that the Log is well-defined on all the points
   MatrixXd Vs[nmodels + 1];
@@ -356,7 +366,7 @@ inline void FixROBStiefel::generate_samples(Eigen::MatrixXd *rob, Eigen::MatrixX
   MatrixXd w(nsamples, nmodels);
 
   // start generator
-  std::mt19937 gen(41);
+  std::mt19937 gen(rseed);
 
   utils::logmesg(lmp, "\nSampling gamma distribution\n");
   // loop through shape values
@@ -374,13 +384,13 @@ inline void FixROBStiefel::generate_samples(Eigen::MatrixXd *rob, Eigen::MatrixX
   }
 
   // generate samples
-  utils::logmesg(lmp, "Generating samples\n");
+  utils::logmesg(lmp, "Generating {} samples\n", nsamples);
   MatrixXd tangential_samples = w * X;
 
   // project back to Stiefel manifold
   MatrixXd delta[nsamples];
 
-  utils::logmesg(lmp, "Retracting samples from Stiefel manifold\n");
+  utils::logmesg(lmp, "Retracting samples from tangent space\n");
   for (isample = 0; isample < nsamples; isample++) {
     delta[isample] = tangential_samples.row(isample).reshaped(nlocal * 3, modelorder);
     stiefel_samples[isample] = stiefel_exp(u0, delta[isample]);
