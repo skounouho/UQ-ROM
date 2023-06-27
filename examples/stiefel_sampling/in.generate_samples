@@ -1,0 +1,18 @@
+# EXAMPLE generate samples from ROBs
+#graphene model based on paramters in IJNME paper by JS Chen-2013:96:599-627
+
+# ------------------- make directory rob ------------------ #
+
+shell [ -d samples ] || mkdir -p samples
+
+# -------------------- initalize atoms -------------------- #
+
+units metal
+
+read_data       ../data.graphene_272C
+pair_style	rebo
+pair_coeff	* * ../CH.rebo C
+
+# ------------------- generate samples -------------------- #
+
+fix 1 all rob/stiefel 9 5 rob/rob.airebo rob/rob.bop rob/rob.lcbop rob/rob.morse rob/rob.rebo rob/rob.tersoff rob/rob.global samples/rob.sample{} seed 41

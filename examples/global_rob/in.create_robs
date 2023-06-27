@@ -17,7 +17,7 @@ pair_coeff	* * ../CH.rebo C
 
 variable N equal 200
 variable order equal 5
-variable potential index airebo bop lcbop rebo tersoff
+variable potential index airebo bop lcbop rebo tersoff morse
 
 # ------------------- create global rob ------------------- #
 
