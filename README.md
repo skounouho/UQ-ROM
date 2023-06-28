@@ -36,12 +36,12 @@ fix ID group-ID nve/rom order robfile
 * order = model order, which corresponds to the number of columns to be read from the reduced-order basis
 * robfile = filepath to the input file containing the reduced-order basis
 
-### fix nvt/rom, npt/rom, nph/rom commands
+### fix nvt/rom command
 ```
 fix ID group-ID style_name keyword value ...
 ```
 * ID, group-ID are documented in [fix](https://docs.lammps.org/fix.html) command
-* style_name = *nvt/rom*, *npt/rom* or *nph/rom*
+* style_name = *nvt/rom* (*npt/rom* and *nph/rom* are not stable)
 * one keyword must be appended
 ```
 keyword = model
