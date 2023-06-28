@@ -90,7 +90,7 @@ The `rob/stiefel` command generates ROB samples based on a few input ROB files. 
 
 ## Author
 
-[UQ-ROM](https://github.com/skounouho/UQ-ROM) was created at Sandia National Labs by Senou Kounouho.
+[UQ-ROM](https://github.com/skounouho/UQ-ROM) was created at Sandia National Labs by Senou Kounouho based on work by Hao Zhang and Johann Guilleminot, PhD, at Duke University.
 
 This work is based on previous libraries:
 * [eiquadprog.hpp](http://www.cs.cmu.edu/~bstephe1/eiquadprog.hpp), Copyright (2011) Benjamin Stephens, GPL v2.
