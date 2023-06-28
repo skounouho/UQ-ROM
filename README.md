@@ -4,7 +4,7 @@ This collection of fixes allow for the creation of reduced order models in LAMMP
 
 ## Installation
 
-Download the files in `src` and insert them in the `src` folder in your LAMMPS installation. You will need to install [Eigen](https://eigen.tuxfamily.org) to use `fix rob`. I do not have a CMake file to do this, so you will need to symlink `Eigen` and `unsupported/Eigen` to the `src` directory in LAMMPS.
+Download the files in `src` and insert them in the `src` folder in your LAMMPS installation. You will need to install [Eigen](https://eigen.tuxfamily.org) to use `fix rob`. I do not have a CMake file to do this, so you will need to symlink `Eigen` and `unsupported/Eigen` to the `src` directory in LAMMPS. Neither library has to be built separately.
 
 ## Background
 
