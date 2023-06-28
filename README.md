@@ -88,6 +88,14 @@ keyword = seed
 
 The `rob/stiefel` command generates ROB samples based on a few input ROB files. The code projects the bases onto the tangent space of the Stiefel manifold, and randomly samples from the tangent space. The samples are then retracted back to the Stiefel manifold and printed to ROB files. The method is outlined in [Zhang and Guilleminot 2023](https://doi.org/10.1016/j.cma.2022.115702).
 
+## Author
+
+[UQ-ROM](https://github.com/skounouho/UQ-ROM) was created at Sandia National Labs by Senou Kounouho.
+
+This work is based on previous libraries:
+* [eiquadprog.hpp](http://www.cs.cmu.edu/~bstephe1/eiquadprog.hpp), Copyright (2011) Benjamin Stephens, GPL v2.
+* [LAMMPS](http://www.lammps.org/), Copyright (2003) Sandia Corporation, GPL v2.
+
 ## References
 
 Zhang H., Guilleminot J., A Riemannian stochastic representation for quantifying model uncertainties in molecular dynamics simulations, Comput. Methods Appl. Mech. Engrg., 403 (2023), Article 115702, [10.1016/j.cma.2022.115702](https://doi.org/10.1016/j.cma.2022.115702)
