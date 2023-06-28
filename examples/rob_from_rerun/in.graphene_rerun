@@ -6,8 +6,7 @@
 units metal
 
 read_data       ../data.graphene_272C
-pair_style	rebo
-pair_coeff	* * ../CH.rebo C
+comm_modify     cutoff 1 # suppress communication warnings
 
 # -------------------- create rob fix -------------------- #
 
