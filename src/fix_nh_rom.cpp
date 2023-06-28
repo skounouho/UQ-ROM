@@ -23,7 +23,6 @@
 #include "respa.h"
 #include "update.h"
 
-#include <iostream>
 #include <fstream>
 #include <sstream>
 
@@ -33,13 +32,16 @@ using namespace FixConst;
 /* ---------------------------------------------------------------------- */
 
 FixNHROM::FixNHROM(LAMMPS *lmp, int narg, char **arg) :
-  FixNH(lmp, narg, arg)
+  FixNH(lmp, narg, arg),
+  phi(nullptr), y(nullptr), y_dot(nullptr), y_dot_dot(nullptr), x0(nullptr),
+  y_all(nullptr), y_dot_all(nullptr)
 {
   int iarg = 3;
 
   while (iarg < narg) {
     if (strcmp(arg[iarg],"model") == 0) {
       if (iarg+3 > narg) utils::missing_cmd_args(FLERR, "fix nvt/nph/npt rom", error);
+
       dynamic_group_allow = 1;
       time_integrate = 1;
 
@@ -50,15 +52,9 @@ FixNHROM::FixNHROM(LAMMPS *lmp, int narg, char **arg) :
       MPI_Comm_rank(world,&me);
       MPI_Comm_size(world,&nprocs);
 
-      // create arrays
+      // allocate arrays
 
       int nlocal = atom->nlocal;
-
-      phi = nullptr;
-      y = nullptr;
-      y_dot = nullptr;
-      y_dot_dot = nullptr;  
-      x0 = nullptr;
 
       memory->create(phi, nlocal * 3, modelorder, "FixNHROM:phi");
       memory->create(y, modelorder, "FixNHROM:y");
@@ -84,12 +80,12 @@ FixNHROM::FixNHROM(LAMMPS *lmp, int narg, char **arg) :
       }
       
       // check if rob file is available and readable
-
       if (!platform::file_is_readable(arg[iarg + 2]))
         error->all(FLERR, fmt::format("Cannot open file {}: {}", arg[iarg + 2], utils::getsyserror()));
 
       read_rob(arg[iarg + 2], phi);
 
+      // check if last entry is NaN
       if (phi[nlocal * 3 - 1][modelorder - 1] != phi[nlocal * 3 - 1][modelorder - 1]) {
         error->all(FLERR, "Reduced order basis is not filled");
       }
@@ -115,6 +111,7 @@ void FixNHROM::nve_v()
     y_dot[i] += dtf * y_dot_dot[i]; // changed from dtfm
   }
 
+  // sum across processors
   MPI_Allreduce(y_dot, y_dot_all, modelorder, MPI_DOUBLE, MPI_SUM, world);
   y_dot = y_dot_all;
 
@@ -137,6 +134,7 @@ void FixNHROM::nve_x()
     y[i] += dtv * y_dot[i];
   }
 
+  // sum across processors
   MPI_Allreduce(y, y_all, modelorder, MPI_DOUBLE, MPI_SUM, world);
   y = y_all;
 

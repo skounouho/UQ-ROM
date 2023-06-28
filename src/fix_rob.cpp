@@ -94,7 +94,10 @@ void FixROB::end_of_step()
   int nlocal = atom->nlocal;
 
   if (update->ntimestep == 0) {
-    // save initial atom positions
+
+    // save initial atom positions and skip timestep 0
+    // this is for rerun simulations
+
     for (int i = 0; i < nlocal; i++) {
       iatom = tag[i] - 1;
       x0[iatom][0] = x[i][0];

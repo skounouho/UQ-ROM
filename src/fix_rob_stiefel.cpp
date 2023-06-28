@@ -48,13 +48,7 @@ FixROBStiefel::FixROBStiefel(LAMMPS *lmp, int narg, char **arg) :
   nlocal = atom->nlocal;
   rseed = 0;
 
-  nsamples = utils::inumeric(FLERR,arg[3],false,lmp);
-  if (nsamples <= 0) error->all(FLERR,"Illegal fix rob/stiefel nsamples value: {}", nsamples);
-  modelorder = utils::inumeric(FLERR,arg[4],false,lmp);
-  if (modelorder <= 0) error->all(FLERR,"Illegal fix rob/stiefel modelorder value: {}", modelorder);
-
   int iarg = 5;
-
   while (iarg < narg) {
     if (strcmp(arg[iarg], "seed") == 0) {
       rseed = utils::inumeric(FLERR, arg[iarg + 1], false, lmp);
@@ -64,13 +58,19 @@ FixROBStiefel::FixROBStiefel(LAMMPS *lmp, int narg, char **arg) :
     iarg++;
   }
   
+  // parsing input arguments
+
+  nsamples = utils::inumeric(FLERR,arg[3],false,lmp);
+  if (nsamples <= 0) error->all(FLERR,"Illegal fix rob/stiefel nsamples value: {}", nsamples);
+
+  modelorder = utils::inumeric(FLERR,arg[4],false,lmp);
+  if (modelorder <= 0) error->all(FLERR,"Illegal fix rob/stiefel modelorder value: {}", modelorder);
   store_files(iarg - 6, &arg[5]);
+  
   if (nfile < 2) error->all(FLERR,"No global reduced order basis file specified for fix rob/stiefel");
   nmodels = nfile - 1;
 
   sampleformat = utils::strdup(arg[iarg - 1]);
-
-  // generate and print samples
 
   // create arrays
 
@@ -109,9 +109,12 @@ void FixROBStiefel::store_files(int nstr, char **str)
   files = new char*[nfile];
   
   // loop through files, no wildcards
+  // check that the files are all readable
 
   for (int i = 0; i < nfile; i++) {
     files[i] = utils::strdup(str[i]);
+    if (!platform::file_is_readable(files[i]))
+      error->all(FLERR, fmt::format("Cannot open file {}: {}", files[i], utils::getsyserror()));
   }
 }
 
@@ -289,7 +292,7 @@ inline Eigen::MatrixXd FixROBStiefel::stiefel_exp(Eigen::MatrixXd u0, Eigen::Mat
   MatrixXcd D = eig.eigenvalues().asDiagonal();
 
   // MATLAB is not consistent when it creates eigenvectors,
-  // so the eigenvectors computed by Eigen may have differen
+  // so the eigenvectors computed by Eigen may have different
   // values. However, the result is the same.
 
   MatrixXcd MN = V * D.exp() * V.adjoint() * MatrixXd::Identity(r * 2,r);

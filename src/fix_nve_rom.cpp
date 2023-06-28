@@ -33,7 +33,9 @@ using namespace FixConst;
 /* ---------------------------------------------------------------------- */
 
 FixNVEROM::FixNVEROM(LAMMPS *lmp, int narg, char **arg) :
-  FixNVE(lmp, narg, arg)
+  FixNVE(lmp, narg, arg),
+  phi(nullptr), y(nullptr), y_dot(nullptr), y_dot_dot(nullptr), x0(nullptr),
+  y_all(nullptr), y_dot_all(nullptr)
 {
   if (narg < 5) utils::missing_cmd_args(FLERR, "fix nve/rom", error);
 
@@ -53,12 +55,6 @@ FixNVEROM::FixNVEROM(LAMMPS *lmp, int narg, char **arg) :
 
   int nlocal = atom->nlocal;
 
-  phi = nullptr;
-  y = nullptr;
-  y_dot = nullptr;
-  y_dot_dot = nullptr;  
-  x0 = nullptr;
-
   memory->create(phi, nlocal * 3, modelorder, "FixNVEROM:phi");
   memory->create(y, modelorder, "FixNVEROM:y");
   memory->create(y_dot, modelorder, "FixNVEROM:y_dot");
@@ -69,11 +65,10 @@ FixNVEROM::FixNVEROM(LAMMPS *lmp, int narg, char **arg) :
   memory->create(y_all, modelorder, "FixNVEROM:y_all");
   memory->create(y_dot_all, modelorder, "FixNVEROM:y_dot_all");
 
-  // compute variable
+  // set compute variable size
   size_vector = modelorder;
 
   // save initial atom positions
-
   double **xinit = atom->x;
   int *tag = atom->tag;
   int iatom;
@@ -86,7 +81,6 @@ FixNVEROM::FixNVEROM(LAMMPS *lmp, int narg, char **arg) :
   }
 
   // check if rob file is available and readable
-
   if (!platform::file_is_readable(arg[4]))
     error->all(FLERR, fmt::format("Cannot open file {}: {}", arg[4], utils::getsyserror()));
   
@@ -110,11 +104,12 @@ void FixNVEROM::initial_integrate(int /*vflag*/)
 
   // This section is heavily edited. Most atom group tests have been moved to the convert functions
 
-  for (int i = 0; i < modelorder; i++) { // dimension is modelorder
-    y_dot[i] += dtf * y_dot_dot[i]; // changed from dtfm
+  for (int i = 0; i < modelorder; i++) {
+    y_dot[i] += dtf * y_dot_dot[i];
     y[i] += dtv * y_dot[i];
   }
 
+  // sum across processors
   MPI_Allreduce(y, y_all, modelorder, MPI_DOUBLE, MPI_SUM, world);
   MPI_Allreduce(y_dot, y_dot_all, modelorder, MPI_DOUBLE, MPI_SUM, world);
   y = y_all;
@@ -133,10 +128,11 @@ void FixNVEROM::final_integrate()
 
   // This section is heavily edited. Most atom group tests have been moved to the convert functions
 
-  for (int i = 0; i < modelorder; i++) {// dimension is modelorder
-    y_dot[i] += dtf * y_dot_dot[i]; // changed from dtfm
+  for (int i = 0; i < modelorder; i++) {
+    y_dot[i] += dtf * y_dot_dot[i];
   }
 
+  // sum across processors
   MPI_Allreduce(y_dot, y_dot_all, modelorder, MPI_DOUBLE, MPI_SUM, world);
   y_dot = y_dot_all;
 
@@ -145,8 +141,7 @@ void FixNVEROM::final_integrate()
 }
 
 /* ----------------------------------------------------------------------
-    return a single element of the following vectors, in this order:
-      y[modelorder], y_dot[modelorder], y_dot_dot[modelorder]
+    return a single element of y[modelorder]
    ---------------------------------------------------------------------- */
 
 double FixNVEROM::compute_vector(int n)
@@ -161,6 +156,7 @@ double FixNVEROM::compute_vector(int n)
 void FixNVEROM::read_rob(std::string robfile, double **robarray)
 {
   utils::logmesg(lmp, "Reading reduced-order basis file {}\n", robfile);
+
   const int nlocal = atom->nlocal;
 
   try {
