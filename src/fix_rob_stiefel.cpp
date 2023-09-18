@@ -23,16 +23,16 @@
 #include "update.h"
 
 #include <complex>
-#include <fstream>
 #include <Eigen/Core>
 #include <Eigen/SVD>
 #include <Eigen/Cholesky>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
 #include <random>
 #include <sstream>
 #include <string>
 #include <unsupported/Eigen/MatrixFunctions>
-
-#include <iostream>
 
 using namespace Eigen;
 using namespace LAMMPS_NS;
@@ -206,11 +206,11 @@ inline Eigen::MatrixXd FixROBStiefel::stiefel_log(Eigen::MatrixXd u0, Eigen::Mat
   MatrixXcd V = qr2.householderQ();
 
   // "Procrustes preprocessing"
-  BDCSVD<MatrixXcd> svd(V(seq(p, p * 2 - 1), seq(p, p * 2 - 1)), ComputeFullU | ComputeFullV);
+  BDCSVD<MatrixXcd, ComputeFullU | ComputeFullV> svd(V(seq(p, p * 2 - 1), seq(p, p * 2 - 1)));
   MatrixXcd D = svd.matrixU();
   MatrixXcd R = svd.matrixV();
-  V(all, seq(p, p * 2 - 1)) = V(all, seq(p, p * 2 - 1)) * (R * D.transpose());
-  V << MN, V(all, seq(p, p * 2 - 1));
+  V(Eigen::placeholders::all, seq(p, p * 2 - 1)) = V(Eigen::placeholders::all, seq(p, p * 2 - 1)) * (R * D.transpose());
+  V << MN, V(Eigen::placeholders::all, seq(p, p * 2 - 1));
 
   // step 4, for-loop
 
@@ -233,7 +233,7 @@ inline Eigen::MatrixXd FixROBStiefel::stiefel_log(Eigen::MatrixXd u0, Eigen::Mat
 
     // step 9
     MatrixXcd phi = (-C).exp();
-    V(all, seq(p, p * 2 - 1)) = V(all, seq(p, p * 2 - 1)) * phi;
+    V(Eigen::placeholders::all, seq(p, p * 2 - 1)) = V(Eigen::placeholders::all, seq(p, p * 2 - 1)) * phi;
   }
 
   // prepare output
@@ -296,8 +296,8 @@ inline Eigen::MatrixXd FixROBStiefel::stiefel_exp(Eigen::MatrixXd u0, Eigen::Mat
   // values. However, the result is the same.
 
   MatrixXcd MN = V * D.exp() * V.adjoint() * MatrixXd::Identity(r * 2,r);
-  MatrixXd M = MN(seq(0,r - 1), all).real();
-  MatrixXd N = MN(seq(r, last), all).real();
+  MatrixXd M = MN(seq(0,r - 1), Eigen::placeholders::all).real();
+  MatrixXd N = MN(seq(r, Eigen::placeholders::last), Eigen::placeholders::all).real();
 
   MatrixXd u = u0 * M + Q * N;
 

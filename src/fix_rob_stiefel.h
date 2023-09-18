@@ -37,6 +37,7 @@ class FixROBStiefel : public Fix {
    int nsamples;
    int nmodels;
    int modelorder;
+   int rseed;
    
    int nfile;
    char **files;

@@ -34,8 +34,8 @@ class FixROB : public Fix {
   void end_of_step() override;
   void post_run() override;
   Eigen::MatrixXd convert_to_matrix(double **, int, int);
-  Eigen::BDCSVD<Eigen::MatrixXd> compute_svd();
-  void write_phi(Eigen::BDCSVD<Eigen::MatrixXd>);
+  Eigen::BDCSVD<Eigen::MatrixXd, Eigen::ComputeThinU> compute_svd();
+  void write_phi(Eigen::BDCSVD<Eigen::MatrixXd, Eigen::ComputeThinU>);
 
  private:
    int modelorder;
