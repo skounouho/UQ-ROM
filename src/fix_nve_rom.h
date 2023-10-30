@@ -42,8 +42,8 @@ class FixNVEROM : public FixNVE {
   double *y_dot_dot;   // reduced order acceleration
 
   // implementing MPI run capability
-  double *y_all;       // reduced order position across processors
-  double *y_dot_all;   // reduced order velocity across processors
+//   double *y_all;       // reduced order position across processors
+//   double *y_dot_all;   // reduced order velocity across processors
 
   // helper methods
 

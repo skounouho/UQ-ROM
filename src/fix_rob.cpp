@@ -204,6 +204,8 @@ void FixROB::write_phi(Eigen::BDCSVD<Eigen::MatrixXd, Eigen::ComputeThinU> svd) 
       for (i = 0; i < S.size(); i++) {
         file << S(i) << " ";
       }
+      file << "\n# rank\n";
+      file << nsingularvals;
     }
   } catch (std::exception &e) {
     error->one(FLERR, "Error writing reduced-order basis: {}", e.what());

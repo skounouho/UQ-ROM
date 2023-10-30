@@ -34,8 +34,8 @@ using namespace FixConst;
 
 FixNVEROM::FixNVEROM(LAMMPS *lmp, int narg, char **arg) :
   FixNVE(lmp, narg, arg),
-  phi(nullptr), y(nullptr), y_dot(nullptr), y_dot_dot(nullptr), x0(nullptr),
-  y_all(nullptr), y_dot_all(nullptr)
+  phi(nullptr), y(nullptr), y_dot(nullptr), y_dot_dot(nullptr), x0(nullptr)
+  // y_all(nullptr), y_dot_all(nullptr)
 {
   if (narg < 5) utils::missing_cmd_args(FLERR, "fix nve/rom", error);
 
@@ -48,8 +48,8 @@ FixNVEROM::FixNVEROM(LAMMPS *lmp, int narg, char **arg) :
 
   // set up MPI
 
-  MPI_Comm_rank(world,&me);
-  MPI_Comm_size(world,&nprocs);
+  // MPI_Comm_rank(world,&me);
+  // MPI_Comm_size(world,&nprocs);
 
   // create arrays
 
@@ -62,8 +62,8 @@ FixNVEROM::FixNVEROM(LAMMPS *lmp, int narg, char **arg) :
   memory->create(x0, nlocal, 3, "FixNVEROM:x0");
 
   // MPI variables
-  memory->create(y_all, modelorder, "FixNVEROM:y_all");
-  memory->create(y_dot_all, modelorder, "FixNVEROM:y_dot_all");
+  // memory->create(y_all, modelorder, "FixNVEROM:y_all");
+  // memory->create(y_dot_all, modelorder, "FixNVEROM:y_dot_all");
 
   // set compute variable size
   size_vector = modelorder;
@@ -110,10 +110,10 @@ void FixNVEROM::initial_integrate(int /*vflag*/)
   }
 
   // sum across processors
-  MPI_Allreduce(y, y_all, modelorder, MPI_DOUBLE, MPI_SUM, world);
-  MPI_Allreduce(y_dot, y_dot_all, modelorder, MPI_DOUBLE, MPI_SUM, world);
-  y = y_all;
-  y_dot = y_dot_all;
+  // MPI_Allreduce(y, y_all, modelorder, MPI_DOUBLE, MPI_SUM, world);
+  // MPI_Allreduce(y_dot, y_dot_all, modelorder, MPI_DOUBLE, MPI_SUM, world);
+  // y = y_all;
+  // y_dot = y_dot_all;
 
   update_physical_variables(xflag);
 }
@@ -133,8 +133,8 @@ void FixNVEROM::final_integrate()
   }
 
   // sum across processors
-  MPI_Allreduce(y_dot, y_dot_all, modelorder, MPI_DOUBLE, MPI_SUM, world);
-  y_dot = y_dot_all;
+  // MPI_Allreduce(y_dot, y_dot_all, modelorder, MPI_DOUBLE, MPI_SUM, world);
+  // y_dot = y_dot_all;
 
   update_physical_variables(xflag);
 

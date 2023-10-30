@@ -33,8 +33,8 @@ using namespace FixConst;
 
 FixNHROM::FixNHROM(LAMMPS *lmp, int narg, char **arg) :
   FixNH(lmp, narg, arg),
-  phi(nullptr), y(nullptr), y_dot(nullptr), y_dot_dot(nullptr), x0(nullptr),
-  y_all(nullptr), y_dot_all(nullptr)
+  phi(nullptr), y(nullptr), y_dot(nullptr), y_dot_dot(nullptr), x0(nullptr)
+  // y_all(nullptr), y_dot_all(nullptr)
 {
   int iarg = 3;
 
@@ -49,8 +49,8 @@ FixNHROM::FixNHROM(LAMMPS *lmp, int narg, char **arg) :
       
       // set up MPI
 
-      MPI_Comm_rank(world,&me);
-      MPI_Comm_size(world,&nprocs);
+      // MPI_Comm_rank(world,&me);
+      // MPI_Comm_size(world,&nprocs);
 
       // allocate arrays
 
@@ -63,8 +63,8 @@ FixNHROM::FixNHROM(LAMMPS *lmp, int narg, char **arg) :
       memory->create(x0, nlocal, 3, "FixNHROM:x0");
 
       // MPI variables
-      memory->create(y_all, modelorder, "FixNHROM:y_all");
-      memory->create(y_dot_all, modelorder, "FixNHROM:y_dot_all");
+      // memory->create(y_all, modelorder, "FixNHROM:y_all");
+      // memory->create(y_dot_all, modelorder, "FixNHROM:y_dot_all");
 
       // save initial atom positions
 
@@ -112,8 +112,8 @@ void FixNHROM::nve_v()
   }
 
   // sum across processors
-  MPI_Allreduce(y_dot, y_dot_all, modelorder, MPI_DOUBLE, MPI_SUM, world);
-  y_dot = y_dot_all;
+  // MPI_Allreduce(y_dot, y_dot_all, modelorder, MPI_DOUBLE, MPI_SUM, world);
+  // y_dot = y_dot_all;
 
   update_physical_variables(xflag);
 }
@@ -135,8 +135,8 @@ void FixNHROM::nve_x()
   }
 
   // sum across processors
-  MPI_Allreduce(y, y_all, modelorder, MPI_DOUBLE, MPI_SUM, world);
-  y = y_all;
+  // MPI_Allreduce(y, y_all, modelorder, MPI_DOUBLE, MPI_SUM, world);
+  // y = y_all;
 
   update_physical_variables(xflag);
 }
