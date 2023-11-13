@@ -435,31 +435,20 @@ inline void FixROBStiefel::generate_samples(Eigen::MatrixXd *rob, Eigen::MatrixX
   // write closet potential (as index of input)
   // print result to file
 
-  try {
-    std::ofstream file("selection.txt");
-    if (file.is_open()) {
-      for (i = 0; i < nsamples; i++) {
-        file << potentials[nearest[i]];
+  if (select_flag == 1) {
+    try {
+      std::ofstream file("selection.txt");
+      if (file.is_open()) {
+        for (i = 0; i < nsamples; i++) {
+          file << potentials[nearest[i]];
+          file << '\n';
+        }
         file << '\n';
       }
-      file << '\n';
+    } catch (std::exception &e) {
+      std::cout << "Error writing closet potential index";
     }
-  } catch (std::exception &e) {
-    std::cout << "Error writing closet potential index";
   }
-
-  // write matrix of coeff to file
-
-  try {
-    std::ofstream file("coefficients.txt");
-    if (file.is_open()) {
-      file << w;
-      file << '\n';
-    }
-  } catch (std::exception &e) {
-    std::cout << "Error writing closet potential index";
-  }
-
 }
 
 
