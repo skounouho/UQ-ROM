@@ -8,6 +8,8 @@ Download the files in `src` and insert them in the `src` folder in your LAMMPS i
 
 UPDATE: Eigen now checks the C++ standard used by CMake. To avoid errors, change the minimum CXX_STANDARD in `lammps/cmake/CMakeLists.txt` from 11 to 17.
 
+The files in `matlab` are for running the sampling in parallel. (Currently, the C++ code can only sample in serial.) Using this code is recommended. To use this code, include the `matlab` directory in your simulation directory. Modify the simulation parameters in `sampling.m` and change the path to the ROBs from your reference potentials and to your samples ROB directory. Then run `sampling.m`.
+
 ## Background
 
 The goal of proper orthogonal decomposition is to take a complex system of seemingly random vectors and extract some kind of order from the chaos. This is done by modeling the trajectory of each particle as a function of a spatially-dependent function and a time-dependent coefficient.
