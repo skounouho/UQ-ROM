@@ -15,4 +15,4 @@ pair_coeff	* * ../CH.rebo C
 
 # ------------------- generate samples -------------------- #
 
-fix 1 all rob/stiefel 9 5 rob/rob.airebo rob/rob.bop rob/rob.lcbop rob/rob.morse rob/rob.rebo rob/rob.tersoff rob/rob.global samples/rob.sample{} seed 41
+fix 1 all rob/stiefel 9 5 rob/rob.airebo rob/rob.bop rob/rob.lcbop rob/rob.morse rob/rob.rebo rob/rob.tersoff rob/rob.global samples/rob.sample{} seed 41 select
