@@ -44,6 +44,7 @@ class FixROB : public Fix {
    double **x0;
    char *robfilename;
    int fullorderflag;
+   int nmodels;
 };
 
 }    // namespace LAMMPS_NS

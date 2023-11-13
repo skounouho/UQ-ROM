@@ -50,11 +50,8 @@ FixROBStiefel::FixROBStiefel(LAMMPS *lmp, int narg, char **arg) :
 
   int iarg = 5;
   while (iarg < narg) {
-    if (strcmp(arg[iarg], "seed") == 0) {
-      rseed = utils::inumeric(FLERR, arg[iarg + 1], false, lmp);
-      utils::logmesg(lmp, "Random seed set to {}\n", rseed);
-      break;
-    }
+    if (strcmp(arg[iarg], "seed") == 0) break;
+    if (strcmp(arg[iarg], "select") == 0) break;
     iarg++;
   }
   
@@ -71,6 +68,27 @@ FixROBStiefel::FixROBStiefel(LAMMPS *lmp, int narg, char **arg) :
   nmodels = nfile - 1;
 
   sampleformat = utils::strdup(arg[iarg - 1]);
+
+  // process keywords
+
+  iarg = 5;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg], "seed") == 0) {
+      rseed = utils::inumeric(FLERR, arg[iarg + 1], false, lmp);
+      utils::logmesg(lmp, "Random seed set to {}\n", rseed);
+      iarg += 1;
+    }
+    if (strcmp(arg[iarg], "select") == 0) {
+      select_flag = 1;
+      potentials = new char* [nmodels];
+      if (narg - iarg < nmodels) error->all(FLERR,"Missing potentials from list for active selection for fix rob/stiefel");
+      for (int i = 0; i < nmodels; i++) {
+        iarg++;
+        potentials[i] = arg[iarg];
+      }
+    }
+    iarg++;
+  }
 
   // create arrays
 
@@ -398,6 +416,50 @@ inline void FixROBStiefel::generate_samples(Eigen::MatrixXd *rob, Eigen::MatrixX
     delta[isample] = tangential_samples.row(isample).reshaped(nlocal * 3, modelorder);
     stiefel_samples[isample] = stiefel_exp(u0, delta[isample]);
   }
+
+  // get closest potential for each sample
+  int *nearest = new int[nsamples];
+  for (isample = 0; isample < nsamples; isample++) {
+    double maxVal = w(isample, 0);
+    int idx = 0;
+    for (i = 0; i < nmodels; i++) {
+      double val = w(isample, i);
+      if (val > maxVal) {
+        maxVal = val;
+        idx = i;
+      }
+    }
+    nearest[isample] = idx;
+  }
+
+  // write closet potential (as index of input)
+  // print result to file
+
+  try {
+    std::ofstream file("selection.txt");
+    if (file.is_open()) {
+      for (i = 0; i < nsamples; i++) {
+        file << potentials[nearest[i]];
+        file << '\n';
+      }
+      file << '\n';
+    }
+  } catch (std::exception &e) {
+    std::cout << "Error writing closet potential index";
+  }
+
+  // write matrix of coeff to file
+
+  try {
+    std::ofstream file("coefficients.txt");
+    if (file.is_open()) {
+      file << w;
+      file << '\n';
+    }
+  } catch (std::exception &e) {
+    std::cout << "Error writing closet potential index";
+  }
+
 }
 
 

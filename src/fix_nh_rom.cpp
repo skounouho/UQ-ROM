@@ -68,16 +68,25 @@ FixNHROM::FixNHROM(LAMMPS *lmp, int narg, char **arg) :
 
       // save initial atom positions
 
-      double **xinit = atom->x;
+      double **x = atom->x;
+      imageint *image = atom->image;
       int *tag = atom->tag;
       int iatom;
+      
+      // unmap atoms
+      double **unwrap;
+      memory->create(unwrap,atom->nlocal,3,"rob:unwrap");
+
+      for (int i = 0; i < nlocal; i++) domain->unmap(x[i], image[i], unwrap[i]);
 
       for (int i = 0; i < nlocal; i++) {
         iatom = tag[i] - 1;
-        x0[iatom][0] = xinit[i][0];
-        x0[iatom][1] = xinit[i][1];
-        x0[iatom][2] = xinit[i][2];
+        x0[iatom][0] = unwrap[i][0];
+        x0[iatom][1] = unwrap[i][1];
+        x0[iatom][2] = unwrap[i][2];
       }
+
+      memory->destroy(unwrap);
       
       // check if rob file is available and readable
       if (!platform::file_is_readable(arg[iarg + 2]))
@@ -101,7 +110,7 @@ FixNHROM::FixNHROM(LAMMPS *lmp, int narg, char **arg) :
 
 void FixNHROM::nve_v()
 {
-  int xflag = 1;
+  int xflag = 0;
 
   compute_reduced_variables(xflag);
 
@@ -125,6 +134,16 @@ void FixNHROM::nve_v()
 void FixNHROM::nve_x()
 {
   int xflag = 1;
+  imageint *image = atom->image;
+  double **x = atom->x;
+  double nlocal = atom->nlocal;
+
+  // unwrap atom positions from simulation box and reset image box
+  if (xflag) 
+    for (int i = 0; i < nlocal; i++) {
+      domain->unmap(x[i], image[i]);
+      image[i] = ((imageint) IMGMAX << IMG2BITS) | ((imageint) IMGMAX << IMGBITS) | IMGMAX;
+    }
 
   compute_reduced_variables(xflag);
 
@@ -139,6 +158,12 @@ void FixNHROM::nve_x()
   // y = y_all;
 
   update_physical_variables(xflag);
+
+  // wrap atom positions into simulation box
+  if (xflag)
+    for (int i = 0; i < nlocal; i++) {
+      domain->remap(x[i], image[i]);
+    }
 }
 
 /* ---------------------------------------------------------------------- 

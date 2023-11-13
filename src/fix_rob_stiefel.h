@@ -43,6 +43,9 @@ class FixROBStiefel : public Fix {
    char **files;
    char *sampleformat;
 
+   int select_flag;
+   char **potentials;
+
    void store_files(int, char **);
    Eigen::MatrixXd read_rob(std::string);
    void write_rob(std::string, Eigen::MatrixXd);
