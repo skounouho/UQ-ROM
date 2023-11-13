@@ -67,6 +67,10 @@ fix ID group-ID rob N order robfile
 * N = takes snapshots every N timesteps
 * order = model order, which corresponds to the number of columns to be written from the reduced-order basis
 * robfile = filepath to the output file for the reduced-order basis
+```
+keyword = global
+  value = integer n that is the number of models (prompts the ROB for the global basis to be calculated after n-1 post_run simulations)
+```
 
 The `rob` fix generates a reduced order basis using the POD method. The code assembles an array of snapshots during the run, computes the reduced-order basis and writes the results to a user-designated file. The output file format is space-delimited, with the singular values listed in decreasing order at the bottom of the file.
 
@@ -86,6 +90,8 @@ fix ID group-ID rob/stiefel Nsamples order file1 file2 ... fileM sampleformat ke
 ```
 keyword = seed
   value = integer seed for the random number generator
+keyword = select
+  value = none (including this keyword prompts the sampling to also include a "selection.txt" file with the sample-based potentials)
 ```
 
 The `rob/stiefel` command generates ROB samples based on a few input ROB files. The code projects the bases onto the tangent space of the Stiefel manifold, and randomly samples from the tangent space. The samples are then retracted back to the Stiefel manifold and printed to ROB files. The method is outlined in [Zhang and Guilleminot 2023](https://doi.org/10.1016/j.cma.2022.115702).
