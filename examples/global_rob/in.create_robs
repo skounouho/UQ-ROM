@@ -21,7 +21,7 @@ variable potential index airebo bop lcbop rebo tersoff morse
 
 # ------------------- create global rob ------------------- #
 
-fix global all rob ${N} ${order} rob/rob.global
+fix global all rob ${N} ${order} rob/rob.global global 6
 
 # ------------------------- loop -------------------------- #
 
