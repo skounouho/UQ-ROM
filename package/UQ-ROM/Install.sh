@@ -40,7 +40,9 @@ if (test $1 = 1) then
     sed -i -e 's/[^ \t]*uqrom[^ \t]* //' ../Makefile.package
     sed -i -e 's|^PKG_INC =[ \t]*|&-I../../lib/uqrom |' ../Makefile.package
     sed -i -e 's|^PKG_PATH =[ \t]*|&-L../../lib/uqrom |' ../Makefile.package
-    sed -i -e 's|^PKG_LIB =[ \t]*|&-luqrom |' ../Makefile.package
+    sed -i -e 's|^PKG_SYSINC =[ \t]*|&$(uqrom_SYSINC) |' ../Makefile.package
+    sed -i -e 's|^PKG_SYSLIB =[ \t]*|&$(uqrom_SYSLIB) |' ../Makefile.package
+    sed -i -e 's|^PKG_SYSPATH =[ \t]*|&$(uqrom_SYSPATH) |' ../Makefile.package
   fi
 
   if (test -e ../Makefile.package.settings) then
