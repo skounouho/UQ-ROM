@@ -6,6 +6,8 @@ This collection of fixes allow for the creation of reduced order models in LAMMP
 
 Download the files in `package` and follow the installation steps in the README file in that directory. Most of the process is automated by a bash script and cmake commands.
 
+For users using `make` to build LAMMPS with a shared library, there may be some issue with building LAMMPS with this code. Instead of using the `Install.sh` file, manually copy and paste all the fix files (including `fix_nh.cpp`) to the `src` directory of your LAMMPS installation. Create symbolic links to eigen3/Eigen and eigen3/unsupported in your `src` folder as well, and change all instances of `<Eigen/Eigen>` and `<unsupported/Eigen>` to quotations marks instead of braces. Build as usual.
+
 Eigen may check the C++ standard used by CMake. To avoid errors, change the minimum CXX_STANDARD in `lammps/cmake/CMakeLists.txt` from 11 to 17.
 
 The files in `matlab` are for running the sampling in parallel. (Currently, the C++ code can only sample in serial.) Using this code is recommended. To use this code, include the `matlab` directory in your simulation directory. Modify the simulation parameters in `sampling.m` and change the path to the ROBs from your reference potentials and to your samples ROB directory. Then run `sampling.m`.
