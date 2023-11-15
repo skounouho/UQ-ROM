@@ -21,8 +21,7 @@ FixStyle(rob/stiefel,FixROBStiefel);
 #define LMP_FIX_ROB_STIEFEL_H
 
 #include "fix.h"
-#include <Eigen/Core>
-#include <Eigen/SVD>
+#include <Eigen/Eigen>
 
 namespace LAMMPS_NS {
 

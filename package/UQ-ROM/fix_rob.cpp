@@ -24,8 +24,7 @@
 #include "update.h"
 #include <fstream>
 #include <iomanip>
-#include <Eigen/Core>
-#include <Eigen/SVD>
+#include <Eigen/Eigen>
 
 using namespace Eigen;
 using namespace LAMMPS_NS;
@@ -170,7 +169,7 @@ void FixROB::post_run()
     error->warning(FLERR,"Did not collect any snapshots, unable to compute reduced order basis");
     return;
   }
-  BDCSVD<MatrixXd, Eigen::ComputeThinU> svd = compute_svd();
+  BDCSVD<MatrixXd> svd = compute_svd();
   write_phi(svd);
 
   // destroy snapshots and initial positions
@@ -190,7 +189,7 @@ Eigen::MatrixXd FixROB::convert_to_matrix(double **data, int rows, int columns)
 
 /* ---------------------------------------------------------------------- */
 
-Eigen::BDCSVD<MatrixXd, Eigen::ComputeThinU> FixROB::compute_svd()
+Eigen::BDCSVD<MatrixXd> FixROB::compute_svd()
 {
   int iatom;
   int *tag = atom->tag;
@@ -204,14 +203,14 @@ Eigen::BDCSVD<MatrixXd, Eigen::ComputeThinU> FixROB::compute_svd()
   // tranpose and compute singular value decomposition
 
   snapshotmatrix.transposeInPlace();
-  Eigen::BDCSVD<Eigen::MatrixXd, Eigen::ComputeThinU> svd(snapshotmatrix);
+  Eigen::BDCSVD<Eigen::MatrixXd> svd(snapshotmatrix, Eigen::ComputeThinU);
 
   return svd;
 }
 
 /* ---------------------------------------------------------------------- */
 
-void FixROB::write_phi(Eigen::BDCSVD<Eigen::MatrixXd, Eigen::ComputeThinU> svd) {
+void FixROB::write_phi(Eigen::BDCSVD<Eigen::MatrixXd> svd) {
   int i,j;
   int nlocal = atom->nlocal;
 

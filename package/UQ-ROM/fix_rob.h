@@ -21,8 +21,7 @@ FixStyle(rob,FixROB);
 #define LMP_FIX_ROB_H
 
 #include "fix.h"
-#include <Eigen/Core>
-#include <Eigen/SVD>
+#include <Eigen/Eigen>
 
 namespace LAMMPS_NS {
 
@@ -34,8 +33,8 @@ class FixROB : public Fix {
   void end_of_step() override;
   void post_run() override;
   Eigen::MatrixXd convert_to_matrix(double **, int, int);
-  Eigen::BDCSVD<Eigen::MatrixXd, Eigen::ComputeThinU> compute_svd();
-  void write_phi(Eigen::BDCSVD<Eigen::MatrixXd, Eigen::ComputeThinU>);
+  Eigen::BDCSVD<Eigen::MatrixXd> compute_svd();
+  void write_phi(Eigen::BDCSVD<Eigen::MatrixXd>);
 
  private:
    int modelorder;
