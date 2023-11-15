@@ -14,7 +14,7 @@ fi
 # add UQ-ROM package to lammps/src
 if [ -d "./UQ-ROM" ]; then
 	echo "Copying UQ-ROM into $lammps_dir/src..."
-	cp -r "./UQ-ROM" "$lammps_dir/src/UQ-ROM"
+	cp -r "./UQ-ROM" "$lammps_dir/src/"
 else
 	echo "Error: UQ-ROM not found."
 fi
@@ -30,7 +30,7 @@ fi
 # add uqrom to lib lammps/lib
 if [ -d "lib/uqrom" ]; then
 	echo "Copying uqrom into $lammps_dir/lib..."
-	cp -r "./lib/uqrom" "$lammps_dir/lib/uqrom"
+	cp -r "./lib/uqrom" "$lammps_dir/lib/"
 else
 	echo "Error: lib/uqrom not found"
 fi
