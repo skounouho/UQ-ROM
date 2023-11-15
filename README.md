@@ -4,9 +4,9 @@ This collection of fixes allow for the creation of reduced order models in LAMMP
 
 ## Installation
 
-Download the files in `src` and insert them in the `src` folder in your LAMMPS installation. You will need to install [Eigen](https://eigen.tuxfamily.org) to use `fix rob`. I do not have a CMake file to do this, so you will need to symlink `Eigen` and `unsupported/Eigen` to the `src` directory in LAMMPS. Neither library has to be built separately.
+Download the files in `package` and follow the installation steps in the README file in that directory. Most of the process is automated by a bash script and cmake commands.
 
-UPDATE: Eigen now checks the C++ standard used by CMake. To avoid errors, change the minimum CXX_STANDARD in `lammps/cmake/CMakeLists.txt` from 11 to 17.
+Eigen may check the C++ standard used by CMake. To avoid errors, change the minimum CXX_STANDARD in `lammps/cmake/CMakeLists.txt` from 11 to 17.
 
 The files in `matlab` are for running the sampling in parallel. (Currently, the C++ code can only sample in serial.) Using this code is recommended. To use this code, include the `matlab` directory in your simulation directory. Modify the simulation parameters in `sampling.m` and change the path to the ROBs from your reference potentials and to your samples ROB directory. Then run `sampling.m`.
 
