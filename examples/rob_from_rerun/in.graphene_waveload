@@ -17,7 +17,7 @@ neigh_modify	delay 5 every 1
 variable load equal 3/627.51*27.212*sin(2*PI*20*0.001*time)
 
 thermo 1000
-dump 6 all custom 200 dump.graphene id x y z vx vy vz fx fy fz
+dump 6 all custom 200 dump.graphene id xu yu zu vx vy vz fx fy fz
 
 # -------------------- setup for rerun simulation ---------------------------- #
 
