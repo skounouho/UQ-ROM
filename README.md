@@ -15,24 +15,6 @@ Eigen may check the C++ standard used by CMake. To avoid errors, change the mini
 
 The files in `matlab` are for running the sampling in parallel. (Currently, the C++ code can only sample in serial.) Using this code is recommended. To use this code, include the `matlab` directory in your simulation directory. Modify the simulation parameters in `sampling.m` and change the path to the ROBs from your reference potentials and to your samples ROB directory. Then run `sampling.m`.
 
-## Background
-
-The goal of proper orthogonal decomposition is to take a complex system of seemingly random vectors and extract some kind of order from the chaos. This is done by modeling the trajectory of each particle as a function of a spatially-dependent function and a time-dependent coefficient.
-
-$$
-\pmb{q}(t) = \pmb{q}(0) + \sum^{\infty}_{k=1} a_k(t) \pmb{\Phi}_k 
-$$
-
-The reduced order model works by taking $N_s$ atom displacement snapshots of a full atomistic simulation and performing POD using singular value decomposition. The first matrix $[\Phi]$ in the resulting decomposition can be used as a linear approximation of the spatially-dependent functions, while the time-dependent coefficients become the reduced variable $\pmb{y}$.
-
-We can create a reduced order system by projection from the physical space $\pmb{q}$ to the reduced space.
-
-$$
-\pmb{y}(t) = [\Phi]^T (\pmb{q}(t) - \pmb{q}(0))
-$$
-
-For a longer primer on the POD method, see [Weiss 2019](https://doi.org/10.2514/6.2019-3333). For a full mathematical proof of the method, see [Gubisch and Volkwein 2017](https://doi.org/10.1137/1.9781611974829.ch1).
-
 ## Usage
 
 ### fix nve/rom command
