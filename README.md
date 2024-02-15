@@ -9,7 +9,7 @@ This collection of fixes allow for the creation of reduced order models in LAMMP
 4. Create a symbolic links to your installation of eigen in your `src` folder. Ensure the link is callde `eigen`.
 5. Build as usual.
 
-If you have previously installed the package, run uninstall.
+If you have previously installed the package, run `Uninstall.sh`.
 
 Eigen may check the C++ standard used by CMake. To avoid errors, change the minimum CXX_STANDARD in `lammps/cmake/CMakeLists.txt` from 11 to 17.
 
