@@ -2,11 +2,12 @@
 
 This collection of fixes allow for the creation of reduced order models in LAMMPS using POD linear subspace methods.
 
-## Installation
+## Installation Process
 
-Download the files in `package` and follow the installation steps in the README file in that directory. Most of the process is automated by a bash script and cmake commands.
-
-For users using `make` to build LAMMPS with a shared library, there may be some issue with building LAMMPS with this code. Instead of using the `Install.sh` file, manually copy and paste all the fix files (including `fix_nh.cpp`) to the `src` directory of your LAMMPS installation. Create symbolic links to eigen3/Eigen and eigen3/unsupported in your `src` folder as well, and change all instances of `<Eigen/Eigen>` and `<unsupported/Eigen>` to quotations marks instead of braces. Build as usual.
+1. Download the files and follow the installation steps in the README file in that directory.
+2. Copy and paste all the fix files (and replace `fix_nh.cpp`) to the `src` directory of your LAMMPS installation.
+3. Create a symbolic links to your installation of eigen in your `src` folder. Ensure the link is callde `eigen`.
+4. Build as usual.
 
 Eigen may check the C++ standard used by CMake. To avoid errors, change the minimum CXX_STANDARD in `lammps/cmake/CMakeLists.txt` from 11 to 17.
 
