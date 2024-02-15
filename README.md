@@ -6,7 +6,7 @@ This collection of fixes allow for the creation of reduced order models in LAMMP
 
 1. Download the files.
 3. Copy and paste all the fix files (and replace `fix_nh.cpp`) to the `src` directory of your LAMMPS installation.
-4. Create a symbolic links to your installation of eigen in your `src` folder. Ensure the link is callde `eigen`.
+4. Create a symbolic links to your installation of eigen in your `src` folder. Ensure the link is named `eigen`.
 5. Build as usual.
 
 If you have previously installed the package, run `Uninstall.sh`.
