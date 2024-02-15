@@ -24,7 +24,7 @@
 #include "update.h"
 #include <fstream>
 #include <iomanip>
-#include <Eigen/Eigen>
+#include "eigen/Eigen/Eigen"
 
 using namespace Eigen;
 using namespace LAMMPS_NS;

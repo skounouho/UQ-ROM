@@ -21,7 +21,7 @@ FixStyle(rob,FixROB);
 #define LMP_FIX_ROB_H
 
 #include "fix.h"
-#include <Eigen/Eigen>
+#include "eigen/Eigen/Eigen"
 
 namespace LAMMPS_NS {
 
