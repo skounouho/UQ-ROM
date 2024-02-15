@@ -4,10 +4,12 @@ This collection of fixes allow for the creation of reduced order models in LAMMP
 
 ## Installation Process
 
-1. Download the files and follow the installation steps in the README file in that directory.
-2. Copy and paste all the fix files (and replace `fix_nh.cpp`) to the `src` directory of your LAMMPS installation.
-3. Create a symbolic links to your installation of eigen in your `src` folder. Ensure the link is callde `eigen`.
-4. Build as usual.
+1. Download the files.
+3. Copy and paste all the fix files (and replace `fix_nh.cpp`) to the `src` directory of your LAMMPS installation.
+4. Create a symbolic links to your installation of eigen in your `src` folder. Ensure the link is callde `eigen`.
+5. Build as usual.
+
+If you have previously installed the package, run uninstall.
 
 Eigen may check the C++ standard used by CMake. To avoid errors, change the minimum CXX_STANDARD in `lammps/cmake/CMakeLists.txt` from 11 to 17.
 
