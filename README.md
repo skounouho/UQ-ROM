@@ -80,26 +80,6 @@ The `rob` fix generates a reduced order basis using the POD method. The code ass
 
 This command can be used with the LAMMPS [rerun](https://docs.lammps.org/rerun.html) command, as long as the timestep is set to a multiple of the timesteps in the dump files. **To decrease the memory usage during the initial run of the full-simulation, generating the reduced-order basis from a rerun is recommended. To do this, dump the *unwrapped* atom positions during a simulation run.** Generating from a rerun also allows the user to create an basis for a simulation run on multiple processors.
 
-### fix rob/stiefel command
-
-```
-fix ID group-ID rob/stiefel Nsamples order file1 file2 ... fileM sampleformat keyword value
-```
-* ID, group-ID are documented in [fix](https://docs.lammps.org/fix.html) command
-* Nsamples = number of samples to generate
-* order = model order, which corresponds to the number of columns to be written from the reduced-order basis
-* file1, file2, ... fileM = ROB files to read, with the last file being the global basis
-* sampleformat = format string for generate ROB sample files
-* one keyword may be appended
-```
-keyword = seed
-  value = integer seed for the random number generator
-keyword = select
-  value = none (including this keyword prompts the sampling to also include a "selection.txt" file with the sample-based potentials)
-```
-
-The `rob/stiefel` command generates ROB samples based on a few input ROB files. The code projects the bases onto the tangent space of the Stiefel manifold, and randomly samples from the tangent space. The samples are then retracted back to the Stiefel manifold and printed to ROB files. The method is outlined in [Zhang and Guilleminot 2023](https://doi.org/10.1016/j.cma.2022.115702).
-
 ## Author
 
 [UQ-ROM](https://github.com/skounouho/UQ-ROM) was created at Sandia National Labs by Senou Kounouho based on work by Hao Zhang and Johann Guilleminot, PhD, at Duke University.
