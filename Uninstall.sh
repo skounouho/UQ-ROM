@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # define LAMMPS directory
 lammps_dir="/path/to/lammps"
 [ -d $lammps_dir ] || exit 1
