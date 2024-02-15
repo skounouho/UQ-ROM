@@ -4,9 +4,11 @@ This collection of fixes allow for the creation of reduced order models in LAMMP
 
 ## Installation
 
-Download the files in `src` and insert them in the `src` folder in your LAMMPS installation. You will need to install [Eigen](https://eigen.tuxfamily.org) to use `fix rob`. I do not have a CMake file to do this, so you will need to symlink `Eigen` and `unsupported/Eigen` to the `src` directory in LAMMPS. Neither library has to be built separately.
+Download the files in `package` and follow the installation steps in the README file in that directory. Most of the process is automated by a bash script and cmake commands.
 
-UPDATE: Eigen now checks the C++ standard used by CMake. To avoid errors, change the minimum CXX_STANDARD in `lammps/cmake/CMakeLists.txt` from 11 to 17.
+For users using `make` to build LAMMPS with a shared library, there may be some issue with building LAMMPS with this code. Instead of using the `Install.sh` file, manually copy and paste all the fix files (including `fix_nh.cpp`) to the `src` directory of your LAMMPS installation. Create symbolic links to eigen3/Eigen and eigen3/unsupported in your `src` folder as well, and change all instances of `<Eigen/Eigen>` and `<unsupported/Eigen>` to quotations marks instead of braces. Build as usual.
+
+Eigen may check the C++ standard used by CMake. To avoid errors, change the minimum CXX_STANDARD in `lammps/cmake/CMakeLists.txt` from 11 to 17.
 
 The files in `matlab` are for running the sampling in parallel. (Currently, the C++ code can only sample in serial.) Using this code is recommended. To use this code, include the `matlab` directory in your simulation directory. Modify the simulation parameters in `sampling.m` and change the path to the ROBs from your reference potentials and to your samples ROB directory. Then run `sampling.m`.
 
@@ -76,7 +78,7 @@ keyword = global
 
 The `rob` fix generates a reduced order basis using the POD method. The code assembles an array of snapshots during the run, computes the reduced-order basis and writes the results to a user-designated file. The output file format is space-delimited, with the singular values listed in decreasing order at the bottom of the file.
 
-This command can be used with the LAMMPS [rerun](https://docs.lammps.org/rerun.html) command, as long as the timestep is set to a multiple of the timesteps in the dump files. **To decrease the memory usage during the initial run of the full-simulation, generating the reduced-order basis from a rerun is recommended.** Generating from a rerun also allows the user to create an basis for a simulation run on multiple processors.
+This command can be used with the LAMMPS [rerun](https://docs.lammps.org/rerun.html) command, as long as the timestep is set to a multiple of the timesteps in the dump files. **To decrease the memory usage during the initial run of the full-simulation, generating the reduced-order basis from a rerun is recommended. To do this, dump the *unwrapped* atom positions during a simulation run.** Generating from a rerun also allows the user to create an basis for a simulation run on multiple processors.
 
 ### fix rob/stiefel command
 
