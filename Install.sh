@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 # define LAMMPS directory
-lammps_dir="/data1/sck37/test"
-eigen_dir="/data1/sck37/softwares/eigen"
+lammps_dir="/path/to/lammps"
+eigen_dir="/path/to/eigen"
 
 # copy fix files to lammps/src
 for f in src/*
