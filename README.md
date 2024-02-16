@@ -8,7 +8,7 @@ This collection of fixes allow for the creation of reduced order models in LAMMP
 2. Update the file paths in `Install.sh` and run with bash.
 3. Build as usual.
 
-If you have previously installed the package, first run `Uninstall.sh` after updating your the path to your LAMMPS installation. Then run `Install.sh`.
+If you have previously installed the package, first run `Uninstall.sh` after updating the path to your LAMMPS installation. Then run `Install.sh`.
 
 Eigen may check the C++ standard used by CMake. To avoid errors, change the minimum CXX_STANDARD in `lammps/cmake/CMakeLists.txt` from 11 to 17.
 
