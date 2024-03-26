@@ -139,7 +139,7 @@ FixNHROM::FixNHROM(LAMMPS *lmp, int narg, char **arg) :
 
 /* ---------------------------------------------------------------------- */
 
-Eigen::MatrixXd FixNVEROM::convert_to_matrix(double **data, int rows, int columns)
+Eigen::MatrixXd FixNHROM::convert_to_matrix(double **data, int rows, int columns)
 {
     Eigen::MatrixXd eMatrix(rows, columns);
     for (int i = 0; i < rows; ++i)
@@ -261,7 +261,7 @@ void FixNHROM::read_rob(std::string robfile, double **robarray)
     final integration.
    ---------------------------------------------------------------------- */
 
-void FixNVEROM::compute_reduced_variables(int xflag)
+void FixNHROM::compute_reduced_variables(int xflag)
 {
   int i,j,iatom;
   double **x = atom->x;
@@ -335,7 +335,7 @@ void FixNVEROM::compute_reduced_variables(int xflag)
     initial integration and only v during final integration.
    ---------------------------------------------------------------------- */
 
-void FixNVEROM::update_physical_variables(int xflag)
+void FixNHROM::update_physical_variables(int xflag)
 {
   int i,j,iatom;
   double **x = atom->x;
