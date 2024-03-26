@@ -27,6 +27,10 @@
 #include <fstream>
 #include <sstream>
 
+// ----- TESTING MASS MATRIX ------
+#include "eigen/Eigen/Eigen"
+using namespace Eigen;
+
 using namespace LAMMPS_NS;
 using namespace FixConst;
 
@@ -46,11 +50,6 @@ FixNVEROM::FixNVEROM(LAMMPS *lmp, int narg, char **arg) :
 
   modelorder = utils::inumeric(FLERR,arg[3],false,lmp);
 
-  // set up MPI
-
-  // MPI_Comm_rank(world,&me);
-  // MPI_Comm_size(world,&nprocs);
-
   // create arrays
 
   int nlocal = atom->nlocal;
@@ -61,9 +60,9 @@ FixNVEROM::FixNVEROM(LAMMPS *lmp, int narg, char **arg) :
   memory->create(y_dot_dot, modelorder, "FixNVEROM:y_dot_dot");
   memory->create(x0, nlocal, 3, "FixNVEROM:x0");
 
-  // MPI variables
-  // memory->create(y_all, modelorder, "FixNVEROM:y_all");
-  // memory->create(y_dot_all, modelorder, "FixNVEROM:y_dot_all");
+  // ----- TESTING MASS MATRIX ------
+  memory->create(F, modelorder, "FixNVEROM:redm"); // reduced f
+  memory->create(M, modelorder, modelorder, "FixNVEROM:redm"); // reduced m
 
   // set compute variable size
   size_vector = modelorder;
@@ -99,6 +98,48 @@ FixNVEROM::FixNVEROM(LAMMPS *lmp, int narg, char **arg) :
   if (phi[nlocal * 3 - 1][modelorder - 1] != phi[nlocal * 3 - 1][modelorder - 1]) {
     error->all(FLERR, "Reduced order basis is not filled");
   }
+
+  // ---- ADD PROCEDURE FOR ASSEMBLING MASS MATRIX ---
+  double *rmass = atom->rmass;
+  double *mass = atom->mass;
+  int *type = atom->type;
+  double **MPhi;
+  memory->create(MPhi, nlocal * 3, modelorder, "nve/rom:MPhi");
+
+  for (int i=0; i < nlocal; i++) {
+    iatom = tag[i] - 1;
+    double m;
+    if (rmass) m = rmass[i]; else m = mass[type[i]];
+    for (int j=0; j < modelorder; j++) {
+      MPhi[iatom][j] = m * phi[iatom][j];
+      MPhi[iatom + nlocal][j] = m * phi[iatom + nlocal][j];
+      MPhi[iatom + nlocal*2][j] = m * phi[iatom + nlocal*2][j];
+    }
+  }
+
+  for (int i=0; i < modelorder; i++) {
+    for (int j=0; j < modelorder; j++) {
+      M[i][j] = 0;
+      for (int k=0; k < nlocal*3; k++) {
+        M[i][j] += phi[k][i] * MPhi[k][j];
+      }
+    }
+  }
+
+  A = convert_to_matrix(M, modelorder, modelorder);
+  memory->destroy(M);
+
+  std::cout << A << std::endl;
+}
+
+/* ---------------------------------------------------------------------- */
+
+Eigen::MatrixXd FixNVEROM::convert_to_matrix(double **data, int rows, int columns)
+{
+    Eigen::MatrixXd eMatrix(rows, columns);
+    for (int i = 0; i < rows; ++i)
+        eMatrix.row(i) = Eigen::VectorXd::Map(&data[i][0], columns);
+    return eMatrix;
 }
 
 /* ----------------------------------------------------------------------
@@ -120,6 +161,17 @@ void FixNVEROM::initial_integrate(int /*vflag*/)
     }
   
   compute_reduced_variables(xflag);
+
+  // ---- TEST MASS CALCULATING y_dot_dot ----
+  VectorXd b(modelorder);
+  for (int i = 0; i < modelorder; i++) {
+    b(i) = F[i];
+  }
+  VectorXd soln = A.colPivHouseholderQr().solve(b);
+  for (int i = 0; i < modelorder; i++) {
+    y_dot_dot[i] = soln(i);
+  }
+  
 
   // This section is heavily edited. Most atom group tests have been moved to the convert functions
 
@@ -153,6 +205,17 @@ void FixNVEROM::final_integrate()
   compute_reduced_variables(xflag);
 
   // This section is heavily edited. Most atom group tests have been moved to the convert functions
+
+  // ---- TEST MASS CALCULATING y_dot_dot ----
+  VectorXd b(modelorder);
+  for (int i = 0; i < modelorder; i++) {
+    b(i) = F[i];
+  }
+
+  VectorXd soln = A.colPivHouseholderQr().solve(b);
+  for (int i = 0; i < modelorder; i++) {
+    y_dot_dot[i] = soln(i);
+  }
 
   for (int i = 0; i < modelorder; i++) {
     y_dot[i] += dtf * y_dot_dot[i];
@@ -226,6 +289,7 @@ void FixNVEROM::compute_reduced_variables(int xflag)
     if (xflag) y[j] = 0;
     y_dot[j] = 0;
     y_dot_dot[j] = 0.0;
+    F[j] = 0.0;
 
     if (rmass) {
       for (i = 0; i < nlocal; i++) {
@@ -243,7 +307,11 @@ void FixNVEROM::compute_reduced_variables(int xflag)
 
           y_dot_dot[j] += phi[iatom][j]          * f[i][0] / rmass[i];
           y_dot_dot[j] += phi[iatom+nlocal][j]   * f[i][1] / rmass[i];
-          y_dot_dot[j] += phi[iatom+nlocal*2][j] * f[i][2] / rmass[i];                 
+          y_dot_dot[j] += phi[iatom+nlocal*2][j] * f[i][2] / rmass[i];  
+
+          F[j] += phi[iatom][j]          * f[i][0];
+          F[j] += phi[iatom+nlocal][j]   * f[i][1];
+          F[j] += phi[iatom+nlocal*2][j] * f[i][2];               
         }
     }
     else {
@@ -262,7 +330,11 @@ void FixNVEROM::compute_reduced_variables(int xflag)
 
           y_dot_dot[j] += phi[iatom][j]          * f[i][0] / mass[type[i]];
           y_dot_dot[j] += phi[iatom+nlocal][j]   * f[i][1] / mass[type[i]];
-          y_dot_dot[j] += phi[iatom+nlocal*2][j] * f[i][2] / mass[type[i]];                 
+          y_dot_dot[j] += phi[iatom+nlocal*2][j] * f[i][2] / mass[type[i]];
+
+          F[j] += phi[iatom][j]          * f[i][0];
+          F[j] += phi[iatom+nlocal][j]   * f[i][1];
+          F[j] += phi[iatom+nlocal*2][j] * f[i][2];                 
         }
     }
   }  
