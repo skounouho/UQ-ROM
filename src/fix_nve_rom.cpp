@@ -128,8 +128,6 @@ FixNVEROM::FixNVEROM(LAMMPS *lmp, int narg, char **arg) :
 
   A = convert_to_matrix(M, modelorder, modelorder);
   memory->destroy(M);
-
-  std::cout << A << std::endl;
 }
 
 /* ---------------------------------------------------------------------- */
