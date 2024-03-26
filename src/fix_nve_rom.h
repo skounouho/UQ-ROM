@@ -21,6 +21,7 @@ FixStyle(nve/rom,FixNVEROM);
 #define LMP_FIX_NVE_ROM_H
 
 #include "fix_nve.h"
+#include "eigen/Eigen/Eigen"
 
 namespace LAMMPS_NS {
 
@@ -41,9 +42,11 @@ class FixNVEROM : public FixNVE {
   double *y_dot;       // reduced order velocity
   double *y_dot_dot;   // reduced order acceleration
 
-  // implementing MPI run capability
-//   double *y_all;       // reduced order position across processors
-//   double *y_dot_all;   // reduced order velocity across processors
+  // ---- MASS MATRIX ----
+  double *F;
+  double **M;
+  Eigen::MatrixXd A;
+  Eigen::MatrixXd convert_to_matrix(double **, int, int);
 
   // helper methods
 
