@@ -15,6 +15,7 @@
 #define LMP_FIX_NH_ROM_H
 
 #include "fix_nh.h"
+#include "eigen/Eigen/Eigen"
 
 namespace LAMMPS_NS {
 
@@ -30,6 +31,12 @@ class FixNHROM : public FixNH {
   double *y;           // reduced order position
   double *y_dot;       // reduced order velocity
   double *y_dot_dot;   // reduced order acceleration
+
+  // ---- MASS MATRIX ----
+  double *F;
+  double **M;
+  Eigen::MatrixXd A;
+  Eigen::MatrixXd convert_to_matrix(double **, int, int);
 
   // implementing MPI run capability
 //   double *y_all;       // reduced order position across processors
