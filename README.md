@@ -14,6 +14,10 @@ Eigen may check the C++ standard used by CMake. To avoid errors, change the mini
 
 The files in `matlab` are for running the sampling in parallel. (Currently, the C++ code can only sample in serial.) Using this code is recommended. To use this code, include the `matlab` directory in your simulation directory. Modify the simulation parameters in `sampling.m` and change the path to the ROBs from your reference potentials and to your samples ROB directory. Then run `sampling.m`.
 
+## Running with OpenMP
+
+When building LAMMPS, enable OPENMP with the `-D BUILD_OMP=yes` option, and set the `OMP_NUM_THREADS` variable in your terminal to the number of threads available.
+
 ## Usage
 
 ### fix nve/rom command
