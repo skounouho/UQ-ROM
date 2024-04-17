@@ -38,18 +38,30 @@ class FixNHROM : public FixNH {
   Eigen::MatrixXd A;
   Eigen::MatrixXd convert_to_matrix(double **, int, int);
 
+  // ---- TEST VSHIFT ----
+  double **lamda0;   // stores initial positions in lambda coordinates
+
   // implementing MPI run capability
 //   double *y_all;       // reduced order position across processors
 //   double *y_dot_all;   // reduced order velocity across processors
 
   void nve_v() override;
   void nve_x() override;
+  int setmask() override;
+
 
   // helper methods
   
   void read_rob(std::string, double**);
   void compute_reduced_variables(int);
   void update_physical_variables(int);
+  void zeta_virial();
+
+  // --- ZETA pressures methods ----
+  void setup(int) override;
+  void initial_integrate(int) override;
+  void final_integrate() override;
+
    
 };
 

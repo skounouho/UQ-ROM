@@ -27,12 +27,14 @@
 #include <fstream>
 #include <sstream>
 
-// ----- TESTING MASS MATRIX ------
 #include "eigen/Eigen/Eigen"
 using namespace Eigen;
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
+
+// --- TESTING PARALLELISM ----
+#include <omp.h>
 
 /* ---------------------------------------------------------------------- */
 
@@ -276,64 +278,33 @@ void FixNVEROM::compute_reduced_variables(int xflag)
   double **v = atom->v;
   double **f = atom->f;
   int *mask = atom->mask;
-  double *rmass = atom->rmass;
-  double *mass = atom->mass;
   int *type = atom-> type;
   int *tag = atom->tag;
   int nlocal = atom->nlocal;
   if (igroup == atom->firstgroup) nlocal = atom->nfirst;
 
+  #pragma omp parallel for
   for (j = 0; j < modelorder; j++){
     if (xflag) y[j] = 0;
     y_dot[j] = 0;
-    y_dot_dot[j] = 0.0;
     F[j] = 0.0;
 
-    if (rmass) {
-      for (i = 0; i < nlocal; i++) {
-          iatom = tag[i] - 1;
+    for (i = 0; i < nlocal; i++) {
+      iatom = tag[i] - 1;
 
-          if (xflag) {
-            y[j] += phi[iatom][j]                * (x[i][0] - x0[iatom][0]);
-            y[j] += phi[iatom + nlocal][j]       * (x[i][1] - x0[iatom][1]);
-            y[j] += phi[iatom + nlocal*2][j]     * (x[i][2] - x0[iatom][2]);
-          }
+      if (xflag) {
+        y[j] += phi[iatom][j]                * (x[i][0] - x0[iatom][0]);
+        y[j] += phi[iatom + nlocal][j]       * (x[i][1] - x0[iatom][1]);
+        y[j] += phi[iatom + nlocal*2][j]     * (x[i][2] - x0[iatom][2]);
+      }
 
-          y_dot[j] += phi[iatom][j]              * v[i][0];
-          y_dot[j] += phi[iatom + nlocal][j]     * v[i][1];
-          y_dot[j] += phi[iatom + nlocal*2][j]   * v[i][2];
+      y_dot[j] += phi[iatom][j]              * v[i][0];
+      y_dot[j] += phi[iatom + nlocal][j]     * v[i][1];
+      y_dot[j] += phi[iatom + nlocal*2][j]   * v[i][2]; 
 
-          y_dot_dot[j] += phi[iatom][j]          * f[i][0] / rmass[i];
-          y_dot_dot[j] += phi[iatom+nlocal][j]   * f[i][1] / rmass[i];
-          y_dot_dot[j] += phi[iatom+nlocal*2][j] * f[i][2] / rmass[i];  
-
-          F[j] += phi[iatom][j]          * f[i][0];
-          F[j] += phi[iatom+nlocal][j]   * f[i][1];
-          F[j] += phi[iatom+nlocal*2][j] * f[i][2];               
-        }
-    }
-    else {
-      for (i = 0; i < nlocal; i++) {
-          iatom = tag[i] - 1;
-
-          if (xflag) {
-            y[j] += phi[iatom][j]                * (x[i][0] - x0[iatom][0]);
-            y[j] += phi[iatom + nlocal][j]       * (x[i][1] - x0[iatom][1]);
-            y[j] += phi[iatom + nlocal*2][j]     * (x[i][2] - x0[iatom][2]);
-          }
-
-          y_dot[j] += phi[iatom][j]              * v[i][0];
-          y_dot[j] += phi[iatom + nlocal][j]     * v[i][1];
-          y_dot[j] += phi[iatom + nlocal*2][j]   * v[i][2];
-
-          y_dot_dot[j] += phi[iatom][j]          * f[i][0] / mass[type[i]];
-          y_dot_dot[j] += phi[iatom+nlocal][j]   * f[i][1] / mass[type[i]];
-          y_dot_dot[j] += phi[iatom+nlocal*2][j] * f[i][2] / mass[type[i]];
-
-          F[j] += phi[iatom][j]          * f[i][0];
-          F[j] += phi[iatom+nlocal][j]   * f[i][1];
-          F[j] += phi[iatom+nlocal*2][j] * f[i][2];                 
-        }
+      F[j] += phi[iatom][j]          * f[i][0];
+      F[j] += phi[iatom+nlocal][j]   * f[i][1];
+      F[j] += phi[iatom+nlocal*2][j] * f[i][2];               
     }
   }  
 }
@@ -353,6 +324,7 @@ void FixNVEROM::update_physical_variables(int xflag)
   int nlocal = atom->nlocal;
   if (igroup == atom->firstgroup) nlocal = atom->nfirst;
 
+  #pragma omp parallel for
   for (i = 0; i < nlocal; i++)
     if (mask[i] & groupbit) {
       iatom = tag[i] - 1;
