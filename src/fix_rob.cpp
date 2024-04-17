@@ -66,7 +66,10 @@ FixROB::FixROB(LAMMPS *lmp, int narg, char **arg) :
   snapshots = nullptr;
   x0 = nullptr;
   memory->create(snapshots, 1, nlocal * 3, "FixROB:snapshots");
-  memory->create(x0, nlocal, 3, "FixNVEROM:x0");
+  memory->create(x0, nlocal, 3, "FixROB:x0");
+
+  // ---- TESTING ZETA -----
+  memory->create(lamda0, nlocal, 3, "FixROB:lamda0");
 
   // initialize snapshot count
 
@@ -74,7 +77,7 @@ FixROB::FixROB(LAMMPS *lmp, int narg, char **arg) :
   
   // unmap atoms
   double **unwrap;
-  memory->create(unwrap,atom->nlocal,3,"rob:unwrap");
+  memory->create(unwrap,atom->nlocal,3,"FixROB:unwrap");
 
   double **x = atom->x;
   imageint *image = atom->image;
@@ -90,6 +93,8 @@ FixROB::FixROB(LAMMPS *lmp, int narg, char **arg) :
     x0[iatom][0] = unwrap[i][0];
     x0[iatom][1] = unwrap[i][1];
     x0[iatom][2] = unwrap[i][2];
+
+    domain->x2lamda(x0[iatom], lamda0[iatom]);
   }
 
   memory->destroy(unwrap);
@@ -142,13 +147,18 @@ void FixROB::end_of_step()
     memory->grow(snapshots, nsnapshots + 1, nlocal * 3, "FixROB:snapshots");
   }
 
+  // ---- ZETA SCALING ----
+  double zetax0[3];
+
   // shift by initial position and save
 
   for (int i = 0; i < nlocal; i++) {
     iatom = tag[i] - 1;
-    snapshots[nsnapshots][iatom] = unwrap[i][0] - x0[iatom][0];
-    snapshots[nsnapshots][iatom + nlocal] = unwrap[i][1] - x0[iatom][1];
-    snapshots[nsnapshots][iatom + nlocal*2] = unwrap[i][2] - x0[iatom][2];
+    // snapshots[nsnapshots][iatom] = unwrap[i][0] - x0[iatom][0];
+    // snapshots[nsnapshots][iatom + nlocal] = unwrap[i][1] - x0[iatom][1];
+    // snapshots[nsnapshots][iatom + nlocal*2] = unwrap[i][2] - x0[iatom][2];
+    domain->lamda2x(lamda0[iatom], zetax0);
+    for (int d = 0; d < 3; d++) snapshots[nsnapshots][iatom + nlocal*d] = unwrap[i][d] - zetax0[d];
   }
 
   memory->destroy(unwrap);

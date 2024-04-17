@@ -13,39 +13,20 @@
 
 #ifdef FIX_CLASS
 // clang-format off
-FixStyle(rob,FixROB);
+FixStyle(npt/rom,FixNPTROM);
 // clang-format on
 #else
 
-#ifndef LMP_FIX_ROB_H
-#define LMP_FIX_ROB_H
+#ifndef LMP_FIX_NPT_ROM_H
+#define LMP_FIX_NPT_ROM_H
 
-#include "fix.h"
-#include "eigen/Eigen/Eigen"
+#include "fix_nh_rom.h"
 
 namespace LAMMPS_NS {
 
-class FixROB : public Fix {
+class FixNPTROM : public FixNHROM {
  public:
-  FixROB(class LAMMPS *, int, char **);
-
-  int setmask() override;
-  void end_of_step() override;
-  void post_run() override;
-  Eigen::MatrixXd convert_to_matrix(double **, int, int);
-  Eigen::BDCSVD<Eigen::MatrixXd> compute_svd();
-  void write_phi(Eigen::BDCSVD<Eigen::MatrixXd>);
-
-  double **lamda0;   // stores initial positions in lamda coordinates
-
- private:
-   int modelorder;
-   int nsnapshots;
-   double **snapshots;
-   double **x0;
-   char *robfilename;
-   int fullorderflag;
-   int nmodels;
+  FixNPTROM(class LAMMPS *, int, char **);
 };
 
 }    // namespace LAMMPS_NS
