@@ -137,6 +137,8 @@ void FixROB::end_of_step()
       x0[iatom][0] = unwrap[i][0];
       x0[iatom][1] = unwrap[i][1];
       x0[iatom][2] = unwrap[i][2];
+
+      domain->x2lamda(x0[iatom], lamda0[iatom]);
     }
 
     memory->destroy(unwrap);

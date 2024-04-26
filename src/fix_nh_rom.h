@@ -47,21 +47,12 @@ class FixNHROM : public FixNH {
 
   void nve_v() override;
   void nve_x() override;
-  int setmask() override;
-
 
   // helper methods
   
   void read_rob(std::string, double**);
   void compute_reduced_variables(int);
   void update_physical_variables(int);
-  void zeta_virial();
-
-  // --- ZETA pressures methods ----
-  void setup(int) override;
-  void initial_integrate(int) override;
-  void final_integrate() override;
-
    
 };
 

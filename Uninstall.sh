@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # define LAMMPS directory
-lammps_dir="/data1/sck37/softwares/lammps"
+lammps_dir="/home/senou/research/mylammps"
 
 # copy fix files to lammps/src
 for f in src/*
